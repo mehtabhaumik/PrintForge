@@ -23,16 +23,20 @@ Most printer apps expose users to ports, unreachable devices, confusing network 
 
 PrintForge is free-first today, with foundations for future scan and fax support already shaped into the architecture.
 
-```mermaid
-flowchart LR
-    A["Open PrintForge"] --> B["Find or add a device"]
-    B --> C{"Device found?"}
-    C -->|"Yes"| D["Check printer capabilities"]
-    C -->|"No"| E["Guided troubleshooting or manual IP"]
-    D --> F["Save trusted device"]
-    F --> G["Print PDF / image"]
-    G --> H["Human-friendly diagnostics"]
-    E --> B
+**Product loop**
+
+```txt
+Open PrintForge
+  -> Find or add a device
+  -> If found: check printer capabilities
+  -> Save trusted device
+  -> Print PDF or image
+  -> Show human-friendly diagnostics
+
+If no device is found:
+  -> Guide troubleshooting
+  -> Offer manual IP setup
+  -> Return to device setup
 ```
 
 ---
@@ -79,20 +83,23 @@ The app includes a temporary product-grade PrintForge mark and wordmark. The log
 
 PrintForge does not rely on one discovery path.
 
-```mermaid
-flowchart TD
-    A["Start Search"] --> B["mDNS / Bonjour"]
-    B --> B1["_ipp._tcp"]
-    B --> B2["_printer._tcp"]
-    A --> C["Fallback IP Range Scan"]
-    C --> C1["Port 631 IPP"]
-    C --> C2["Port 9100 RAW"]
-    B1 --> D["Normalize printer model"]
-    B2 --> D
-    C1 --> D
-    C2 --> D
-    D --> E["Deduplicate by IP"]
-    E --> F["Progressive results"]
+**Discovery pipeline**
+
+| Step | Strategy | What PrintForge checks |
+| --- | --- | --- |
+| 1 | mDNS / Bonjour | `_ipp._tcp` and `_printer._tcp` service announcements |
+| 2 | Fallback IP scan | Common printer ports `631` and `9100` across the local subnet |
+| 3 | Normalize | Service name, IP address, port, protocol hint, and discovery source |
+| 4 | Deduplicate | Avoid duplicate rows for the same printer IP |
+| 5 | Progressively display | Show devices as they appear instead of waiting for the full scan |
+
+```txt
+Start Search
+  -> Bonjour service scan
+  -> Fallback subnet scan
+  -> Normalize printer records
+  -> Deduplicate by IP
+  -> Show progressive results
 ```
 
 Discovery result shape:
@@ -207,39 +214,25 @@ It also includes:
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph RN["React Native TypeScript"]
-        A["Screens"]
-        B["Reusable Components"]
-        C["Zustand Store"]
-        D["Services"]
-        E["Theme + Brand Tokens"]
-    end
+**Architecture map**
 
-    subgraph Native["Native Modules"]
-        F["Android Discovery Engine"]
-        G["Android Capability Engine"]
-        H["Android Print Engine"]
-        I["iOS Discovery Foundation"]
-    end
+| Layer | Includes | Responsibility |
+| --- | --- | --- |
+| Presentation | Screens, reusable components, logo, cards, status UI | Delivers the premium mobile experience |
+| State | Zustand store | Coordinates selected printer, saved devices, discovery, capabilities, print jobs, and diagnostics |
+| Services | Discovery bridge, capability service, print service, diagnostics, assistant logic | Keeps business behavior outside screen components |
+| Native Android | Discovery, capability, and print Kotlin modules | Performs local network and print operations off the JS thread |
+| Native iOS | Swift discovery bridge foundation | Prepares the app for iOS discovery parity |
+| Persistence | AsyncStorage and print attempt logs | Keeps saved devices and local diagnostic history |
+| Brand system | Theme tokens, spacing, radii, shadows, logo wrapper | Keeps the UI consistent and replaceable |
 
-    subgraph Storage["Local Persistence"]
-        J["AsyncStorage Saved Printers"]
-        K["Print Attempt Logs"]
-    end
-
-    A --> B
-    A --> C
-    C --> D
-    D --> F
-    D --> G
-    D --> H
-    D --> I
-    C --> J
-    C --> K
-    E --> A
-    E --> B
+```txt
+Screens
+  -> Reusable components
+  -> Zustand store
+  -> Services
+  -> Native Android / iOS bridges
+  -> AsyncStorage and print logs
 ```
 
 Project structure:
@@ -385,26 +378,16 @@ cd android
 
 ## User Journey
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Home as Home Dashboard
-    participant Setup as Printer Setup
-    participant Engine as Discovery Engine
-    participant Detail as Printer Detail
-    participant Print as Print Workflow
-    participant Guide as ForgeGuide
-
-    User->>Home: Open app
-    Home->>Setup: Set up printer
-    Setup->>Engine: Search Wi-Fi
-    Engine-->>Setup: Progressive devices or no-device feedback
-    User->>Setup: Select device or add IP
-    Setup->>Detail: Connect and inspect capabilities
-    Detail->>Print: Print PDF/image or test page
-    Print-->>Detail: Success or friendly failure
-    User->>Guide: Ask for help anytime
-```
+| Moment | User action | PrintForge response |
+| --- | --- | --- |
+| 1 | Opens the app | Shows dashboard, saved devices, available devices, setup, and ForgeGuide |
+| 2 | Starts setup | Offers Wi-Fi discovery or manual IP entry |
+| 3 | Searches Wi-Fi | Shows a focused search dialog with progress and found devices |
+| 4 | Selects a printer | Saves the device and checks capabilities |
+| 5 | Opens printer details | Shows status, print action, diagnostics, and scanner foundation |
+| 6 | Prints a file | Sends PDF/image via IPP or RAW depending on printer support |
+| 7 | Something fails | Explains the issue in calm language with next steps |
+| 8 | Needs help | ForgeGuide answers offline with contextual follow-up questions |
 
 ---
 
@@ -455,6 +438,10 @@ PrintForge can be offered free while still creating long-term product value:
 
 ---
 
-## License
+## Copyright and License
 
-Private project unless a license is added.
+Copyright (c) 2026 Bhaumik Mehta. All rights reserved.
+
+PrintForge is proprietary software. This repository is not open source, and no permission is granted to use, copy, modify, distribute, sublicense, sell, host, publish, or create derivative works from any part of this project without prior written permission from the copyright holder.
+
+Viewing this repository or cloning it does not grant a license. See `LICENSE` for the full proprietary notice.
