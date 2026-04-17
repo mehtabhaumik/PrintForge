@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="PrintForge premium mobile app interface"
+    />
+    <title>PrintForge</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./brand.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="splash-screen" id="splash-screen" aria-label="PrintForge is opening">
+      <div class="splash-card">
+        <printforge-logo variant="stacked" size="large"></printforge-logo>
+        <p>Connect. Print. Scan. Simplified.</p>
+        <div class="splash-loader" aria-hidden="true"><span></span></div>
+      </div>
+    </div>
+
+    <main class="app-shell" aria-label="PrintForge app">
+      <header class="topbar">
+        <a class="brand" href="#studio" aria-label="PrintForge home">
+          <printforge-logo variant="horizontal" size="small"></printforge-logo>
+          <span class="brand-state" id="brand-state">Ready to print</span>
+        </a>
+
+        <button class="icon-button" type="button" aria-label="Notifications">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M15 17H9m9-2v-4a6 6 0 0 0-12 0v4l-1.5 2h15L18 15Z" />
+            <path d="M10 20h4" />
+          </svg>
+          <span class="notification-dot" aria-hidden="true"></span>
+        </button>
+      </header>
+
+      <section class="screen is-active" id="studio" data-screen="studio">
+        <div class="page-intro">
+          <p class="eyebrow">Studio</p>
+          <h1>Forge your next print.</h1>
+          <p>
+            Pick a model, choose a finish, and PrintForge will guide the rest
+            in plain language.
+          </p>
+        </div>
+
+        <section class="status-card" aria-labelledby="printer-status-title">
+          <div>
+            <p class="section-label">Printer status</p>
+            <h2 id="printer-status-title">Calibrated and warm</h2>
+            <p class="status-copy" id="status-copy">
+              Everything looks good. You can start a print when your model is
+              ready.
+            </p>
+          </div>
+          <div class="progress-ring" aria-label="Printer readiness 92 percent">
+            <span>92%</span>
+          </div>
+        </section>
+
+        <section class="upload-card" aria-labelledby="upload-title">
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 16V4" />
+              <path d="m7 9 5-5 5 5" />
+              <path d="M5 16v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3" />
+            </svg>
+          </div>
+          <div>
+            <p class="section-label">Model</p>
+            <h2 id="upload-title">Drop a file here</h2>
+            <p id="upload-help">
+              STL, OBJ, and 3MF files work best. We will check the model before
+              printing.
+            </p>
+          </div>
+          <input
+            class="sr-only"
+            id="model-file"
+            type="file"
+            accept=".stl,.obj,.3mf"
+          />
+          <button class="button button-secondary" id="choose-file" type="button">
+            Choose model
+          </button>
+        </section>
+
+        <section
+          class="scan-card"
+          id="scan-card"
+          aria-live="polite"
+          aria-labelledby="scan-title"
+          hidden
+        >
+          <printforge-logo variant="mark" size="tiny"></printforge-logo>
+          <div>
+            <p class="section-label">Scanning</p>
+            <h2 id="scan-title">Checking your model</h2>
+            <p id="scan-copy">
+              Looking for simple fixes before the print begins.
+            </p>
+          </div>
+          <div class="scan-meter" aria-hidden="true"><span></span></div>
+        </section>
+
+        <section class="panel" aria-labelledby="quality-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">Finish</p>
+              <h2 id="quality-title">Balanced quality</h2>
+            </div>
+            <span class="pill">2h 40m</span>
+          </div>
+
+          <div class="segmented-control" role="group" aria-label="Print quality">
+            <button type="button" data-quality="fast" aria-pressed="false">
+              Fast
+            </button>
+            <button
+              class="is-selected"
+              type="button"
+              data-quality="balanced"
+              aria-pressed="true"
+            >
+              Balanced
+            </button>
+            <button type="button" data-quality="fine" aria-pressed="false">
+              Fine
+            </button>
+          </div>
+        </section>
+
+        <div class="action-row">
+          <button class="button button-primary" id="start-print" type="button">
+            Start print
+          </button>
+          <button class="button button-outline" type="button">
+            Save draft
+          </button>
+        </div>
+      </section>
+
+      <section class="screen" id="queue" data-screen="queue">
+        <div class="page-intro">
+          <p class="eyebrow">Queue</p>
+          <h1>Prints in motion.</h1>
+          <p>
+            See what is printing now, what is next, and anything that needs a
+            quick check.
+          </p>
+        </div>
+
+        <section class="job-card job-card--active" aria-labelledby="active-job">
+          <div class="job-main">
+            <span class="job-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M7 8h10l2 4v6H5v-6l2-4Z" />
+                <path d="M8 8V5h8v3" />
+                <path d="M8 15h8" />
+              </svg>
+            </span>
+            <div>
+              <p class="section-label">Printing now</p>
+              <h2 id="active-job">Desk organizer</h2>
+              <p>Layer 84 of 180. The print is moving smoothly.</p>
+            </div>
+          </div>
+          <div class="meter" aria-label="Print progress 46 percent">
+            <span style="width: 46%"></span>
+          </div>
+        </section>
+
+        <section class="queue-list" aria-label="Upcoming prints">
+          <article class="list-card">
+            <div>
+              <p class="card-title">Phone stand</p>
+              <p class="card-copy">Matte black PLA, balanced finish</p>
+            </div>
+            <span class="status-chip status-chip--success">Ready</span>
+          </article>
+          <article class="list-card">
+            <div>
+              <p class="card-title">Cable clips</p>
+              <p class="card-copy">Needs a flatter edge before printing</p>
+            </div>
+            <span class="status-chip status-chip--warning">Check</span>
+          </article>
+          <article class="list-card">
+            <div>
+              <p class="card-title">Plant marker set</p>
+              <p class="card-copy">Queued after the current print</p>
+            </div>
+            <span class="status-chip">Next</span>
+          </article>
+        </section>
+      </section>
+
+      <section class="screen" id="materials" data-screen="materials">
+        <div class="page-intro">
+          <p class="eyebrow">Materials</p>
+          <h1>Keep every spool clear.</h1>
+          <p>
+            Track colors, weight, and the small details that keep prints
+            reliable.
+          </p>
+        </div>
+
+        <section class="material-card is-selected" data-material="onyx">
+          <span class="swatch swatch--onyx" aria-hidden="true"></span>
+          <div>
+            <p class="card-title">Onyx PLA</p>
+            <p class="card-copy">420g left. Best for clean everyday parts.</p>
+          </div>
+          <button class="select-button" type="button" aria-pressed="true">
+            Using
+          </button>
+        </section>
+
+        <section class="material-card" data-material="mist">
+          <span class="swatch swatch--mist" aria-hidden="true"></span>
+          <div>
+            <p class="card-title">Mist PETG</p>
+            <p class="card-copy">260g left. Good for stronger outdoor pieces.</p>
+          </div>
+          <button class="select-button" type="button" aria-pressed="false">
+            Use
+          </button>
+        </section>
+
+        <section class="material-card" data-material="rose">
+          <span class="swatch swatch--rose" aria-hidden="true"></span>
+          <div>
+            <p class="card-title">Rose TPU</p>
+            <p class="card-copy">Low spool. Save it for flexible parts.</p>
+          </div>
+          <button class="select-button" type="button" aria-pressed="false">
+            Use
+          </button>
+        </section>
+
+        <button class="button button-secondary full-width" type="button">
+          Add material
+        </button>
+      </section>
+
+      <section class="screen" id="care" data-screen="care">
+        <div class="page-intro">
+          <p class="eyebrow">Care</p>
+          <h1>Small checks, better prints.</h1>
+          <p>
+            PrintForge explains what matters before it becomes a failed print.
+          </p>
+        </div>
+
+        <section class="issue-card" aria-labelledby="issue-title">
+          <span class="issue-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="m12 4 9 16H3l9-16Z" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+            </svg>
+          </span>
+          <div>
+            <p class="section-label">Quick check</p>
+            <h2 id="issue-title">The build plate needs a wipe.</h2>
+            <p>
+              Clean the plate with a soft cloth so the first layer can grip
+              evenly.
+            </p>
+          </div>
+        </section>
+
+        <section class="settings-list" aria-label="Care preferences">
+          <button class="setting-row" type="button" aria-pressed="true">
+            <span>
+              <span class="card-title">Smart checks</span>
+              <span class="card-copy">Warn me before a risky print starts</span>
+            </span>
+            <span class="toggle is-on" aria-hidden="true"></span>
+          </button>
+          <button class="setting-row" type="button" aria-pressed="true">
+            <span>
+              <span class="card-title">Calm reminders</span>
+              <span class="card-copy">Use short and simple guidance</span>
+            </span>
+            <span class="toggle is-on" aria-hidden="true"></span>
+          </button>
+          <button class="setting-row" type="button" aria-pressed="false">
+            <span>
+              <span class="card-title">Quiet hours</span>
+              <span class="card-copy">Pause non-urgent alerts overnight</span>
+            </span>
+            <span class="toggle" aria-hidden="true"></span>
+          </button>
+        </section>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Primary">
+        <button
+          class="is-active"
+          type="button"
+          data-tab="studio"
+          aria-controls="studio"
+          aria-selected="true"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 10h16" />
+            <path d="M6 10v8h12v-8" />
+            <path d="M8 6h8l2 4H6l2-4Z" />
+          </svg>
+          Studio
+        </button>
+        <button
+          type="button"
+          data-tab="queue"
+          aria-controls="queue"
+          aria-selected="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 6h14" />
+            <path d="M7 12h14" />
+            <path d="M7 18h14" />
+            <path d="M3 6h.01" />
+            <path d="M3 12h.01" />
+            <path d="M3 18h.01" />
+          </svg>
+          Queue
+        </button>
+        <button
+          type="button"
+          data-tab="materials"
+          aria-controls="materials"
+          aria-selected="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 4h12v6a6 6 0 0 1-12 0V4Z" />
+            <path d="M8 20h8" />
+            <path d="M12 16v4" />
+          </svg>
+          Materials
+        </button>
+        <button
+          type="button"
+          data-tab="care"
+          aria-controls="care"
+          aria-selected="false"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 5 6v5c0 5 3.5 8 7 10 3.5-2 7-5 7-10V6l-7-3Z" />
+            <path d="m9 12 2 2 4-5" />
+          </svg>
+          Care
+        </button>
+      </nav>
+    </main>
+
+    <div class="toast" role="status" aria-live="polite" aria-atomic="true">
+      <span class="toast-dot" aria-hidden="true"></span>
+      <span id="toast-message">PrintForge is ready.</span>
+    </div>
+  </body>
+</html>

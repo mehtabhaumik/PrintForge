@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+
+# Node / React Native
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Metro / TypeScript
+.metro-health-check*
+*.tsbuildinfo
+
+# Android
+android/.gradle/
+android/.kotlin/
+android/app/.cxx/
+android/app/build/
+android/build/
+
+# iOS
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/*.xcworkspace/
+ios/.xcode.env.local
+
+# Ruby / CocoaPods setup
+.bundle/
+vendor/bundle/
+
+# Local machine settings
+android/local.properties
