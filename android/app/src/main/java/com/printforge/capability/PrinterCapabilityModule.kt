@@ -47,7 +47,11 @@ class PrinterCapabilityModule(
         val ippAvailable = probes.any { it.kind == ProbeKind.IPP && it.available }
         val rawAvailable = probes.any { it.kind == ProbeKind.RAW && it.available }
         val httpAvailable = probes.any { it.kind == ProbeKind.HTTP && it.available }
+        val esclProbe = probes.firstOrNull { it.kind == ProbeKind.ESCL && it.available }
+        val airScanProbe = probes.firstOrNull { it.kind == ProbeKind.AIRSCAN && it.available }
+        val scannerDetected = esclProbe != null || airScanProbe != null
         val supportedProtocols = mutableListOf<String>()
+        val scanProtocols = mutableListOf<String>()
 
         if (ippAvailable) {
           supportedProtocols.add("IPP")
@@ -57,16 +61,37 @@ class PrinterCapabilityModule(
           supportedProtocols.add("RAW")
         }
 
+        if (esclProbe != null) {
+          scanProtocols.add("ESCL")
+        }
+
+        if (airScanProbe != null) {
+          scanProtocols.add("AIRSCAN")
+        }
+
+        if (httpAvailable && scanProtocols.isEmpty()) {
+          scanProtocols.add("HTTP")
+        }
+
         val status = when {
           ippAvailable -> "READY"
           rawAvailable -> "LIMITED"
           else -> "UNREACHABLE"
         }
+        val scannerStatus = when {
+          scannerDetected -> "DETECTED"
+          httpAvailable -> "NEEDS_SETUP"
+          ippAvailable || rawAvailable -> "NOT_DETECTED"
+          else -> "UNKNOWN"
+        }
 
         val capability = PrinterCapabilities(
           canPrint = ippAvailable || rawAvailable,
           supportedProtocols = supportedProtocols,
-          canScan = httpAvailable,
+          canScan = scannerDetected,
+          scannerStatus = scannerStatus,
+          scanProtocols = scanProtocols,
+          scanEndpoint = esclProbe?.endpoint ?: airScanProbe?.endpoint,
           canFax = false,
           status = status,
           latencyMs = (System.currentTimeMillis() - startedAt).coerceAtLeast(0L),
@@ -84,6 +109,9 @@ class PrinterCapabilityModule(
             canPrint = false,
             supportedProtocols = emptyList(),
             canScan = false,
+            scannerStatus = "UNKNOWN",
+            scanProtocols = emptyList(),
+            scanEndpoint = null,
             canFax = false,
             status = "UNREACHABLE",
             latencyMs = (System.currentTimeMillis() - startedAt).coerceAtLeast(0L),
@@ -100,6 +128,10 @@ class PrinterCapabilityModule(
       Callable { checkRaw(ip) },
       Callable { checkHttp(ip, HTTP_PORT, secure = false) },
       Callable { checkHttp(ip, HTTPS_PORT, secure = true) },
+      Callable { checkScannerEndpoint(ip, HTTP_PORT, ESCL_CAPABILITIES_PATH, secure = false, ProbeKind.ESCL) },
+      Callable { checkScannerEndpoint(ip, HTTPS_PORT, ESCL_CAPABILITIES_PATH, secure = true, ProbeKind.ESCL) },
+      Callable { checkScannerEndpoint(ip, HTTP_PORT, AIRSCAN_ROOT_PATH, secure = false, ProbeKind.AIRSCAN) },
+      Callable { checkScannerEndpoint(ip, HTTPS_PORT, AIRSCAN_ROOT_PATH, secure = true, ProbeKind.AIRSCAN) },
     )
 
     if (selectedPort.isValidTcpPort() && selectedPort !in DEFAULT_PROBE_PORTS) {
@@ -139,7 +171,28 @@ class PrinterCapabilityModule(
     }
   }
 
-  private fun validateHttpResponse(ip: String, port: Int, secure: Boolean): Boolean {
+  private fun checkScannerEndpoint(
+    ip: String,
+    port: Int,
+    path: String,
+    secure: Boolean,
+    kind: ProbeKind,
+  ): ProbeResult {
+    val endpoint = "${if (secure) "https" else "http"}://$ip:$port$path"
+
+    return measureProbe(kind, endpoint) {
+      validateHttpResponse(ip, port, secure, "GET", path, acceptedStatuses = setOf(200, 401, 403))
+    }
+  }
+
+  private fun validateHttpResponse(
+    ip: String,
+    port: Int,
+    secure: Boolean,
+    method: String = "HEAD",
+    path: String = "/",
+    acceptedStatuses: Set<Int> = (200..499).toSet(),
+  ): Boolean {
     val socket = if (secure) {
       sslContext.socketFactory.createSocket() as Socket
     } else {
@@ -150,17 +203,29 @@ class PrinterCapabilityModule(
       activeSocket.connect(InetSocketAddress(ip, port), PROBE_TIMEOUT_MS.toInt())
       activeSocket.soTimeout = PROBE_TIMEOUT_MS.toInt()
       activeSocket.getOutputStream().write(
-        "HEAD / HTTP/1.1\r\nHost: $ip\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII),
+        "$method $path HTTP/1.1\r\nHost: $ip\r\nConnection: close\r\n\r\n".toByteArray(Charsets.US_ASCII),
       )
       activeSocket.getOutputStream().flush()
 
-      val buffer = ByteArray(HTTP_RESPONSE_PREFIX_BYTES)
+      val buffer = ByteArray(HTTP_RESPONSE_BYTES)
       val readCount = BufferedInputStream(activeSocket.getInputStream()).read(buffer)
       if (readCount <= 0) {
         return@use false
       }
 
-      String(buffer, 0, readCount, Charsets.US_ASCII).startsWith("HTTP/")
+      val responsePrefix = String(buffer, 0, readCount, Charsets.US_ASCII)
+      if (!responsePrefix.startsWith("HTTP/")) {
+        return@use false
+      }
+
+      val statusCode = responsePrefix
+        .lineSequence()
+        .firstOrNull()
+        ?.split(" ")
+        ?.getOrNull(1)
+        ?.toIntOrNull()
+
+      statusCode != null && acceptedStatuses.contains(statusCode)
     }
   }
 
@@ -179,7 +244,7 @@ class PrinterCapabilityModule(
     return this in 1..65535
   }
 
-  private fun measureProbe(kind: ProbeKind, probe: () -> Boolean): ProbeResult {
+  private fun measureProbe(kind: ProbeKind, endpoint: String? = null, probe: () -> Boolean): ProbeResult {
     val startedAt = System.currentTimeMillis()
     val available = try {
       probe()
@@ -189,7 +254,7 @@ class PrinterCapabilityModule(
     val latencyMs = (System.currentTimeMillis() - startedAt).coerceAtLeast(0L)
     logPattern("probe_finished", "$kind available=$available latencyMs=$latencyMs")
 
-    return ProbeResult(kind, available, latencyMs)
+    return ProbeResult(kind, available, latencyMs, endpoint)
   }
 
   private fun PrinterCapabilities.toWritableMap(): WritableMap {
@@ -197,6 +262,11 @@ class PrinterCapabilityModule(
       putBoolean("canPrint", canPrint)
       putArray("supportedProtocols", supportedProtocols.toWritableArray())
       putBoolean("canScan", canScan)
+      putString("scannerStatus", scannerStatus)
+      putArray("scanProtocols", scanProtocols.toWritableArray())
+      if (scanEndpoint != null) {
+        putString("scanEndpoint", scanEndpoint)
+      }
       putBoolean("canFax", canFax)
       putString("status", status)
       putInt("latencyMs", latencyMs.toInt())
@@ -217,18 +287,24 @@ class PrinterCapabilityModule(
     IPP,
     RAW,
     HTTP,
+    ESCL,
+    AIRSCAN,
   }
 
   private data class ProbeResult(
     val kind: ProbeKind,
     val available: Boolean,
     val latencyMs: Long,
+    val endpoint: String? = null,
   )
 
   private data class PrinterCapabilities(
     val canPrint: Boolean,
     val supportedProtocols: List<String>,
     val canScan: Boolean,
+    val scannerStatus: String,
+    val scanProtocols: List<String>,
+    val scanEndpoint: String?,
     val canFax: Boolean,
     val status: String,
     val latencyMs: Long,
@@ -240,10 +316,12 @@ class PrinterCapabilityModule(
     private const val RAW_PORT = 9100
     private const val HTTP_PORT = 80
     private const val HTTPS_PORT = 443
+    private const val ESCL_CAPABILITIES_PATH = "/eSCL/ScannerCapabilities"
+    private const val AIRSCAN_ROOT_PATH = "/eSCL/"
     private const val PROBE_TIMEOUT_MS = 3000L
     private const val PROBE_GRACE_MS = 250L
-    private const val PROBE_PARALLELISM = 5
-    private const val HTTP_RESPONSE_PREFIX_BYTES = 16
+    private const val PROBE_PARALLELISM = 8
+    private const val HTTP_RESPONSE_BYTES = 96
     private val DEFAULT_PROBE_PORTS = setOf(IPP_PORT, RAW_PORT, HTTP_PORT, HTTPS_PORT)
 
     private val sslContext: SSLContext by lazy {

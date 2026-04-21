@@ -50,6 +50,8 @@ export function ManualPrinterCard({
       <View className="mt-5 gap-3">
         <ManualInput
           label="Printer IP"
+          accessibilityLabel="Printer IP address"
+          testID="manual-printer-ip"
           value={ip}
           onChangeText={setIp}
           placeholder="192.168.1.24"
@@ -57,12 +59,16 @@ export function ManualPrinterCard({
         />
         <ManualInput
           label="Name"
+          accessibilityLabel="Printer name"
+          testID="manual-printer-name"
           value={name}
           onChangeText={setName}
           placeholder="Office printer"
         />
         <ManualInput
           label="Port"
+          accessibilityLabel="Printer port"
+          testID="manual-printer-port"
           value={port}
           onChangeText={setPort}
           placeholder="631"
@@ -95,7 +101,11 @@ export function ManualPrinterCard({
       </View>
 
       <View className="mt-5">
-        <ActionButton onPress={addPrinter} disabled={isBusy}>
+        <ActionButton
+          accessibilityLabel="Add printer"
+          testID="manual-add-printer"
+          onPress={addPrinter}
+          disabled={isBusy}>
           Add printer
         </ActionButton>
       </View>
@@ -105,9 +115,13 @@ export function ManualPrinterCard({
 
 function ManualInput({
   label,
+  accessibilityLabel,
+  testID,
   ...props
 }: {
   label: string;
+  accessibilityLabel: string;
+  testID: string;
   value: string;
   onChangeText: (value: string) => void;
   placeholder: string;
@@ -120,6 +134,8 @@ function ManualInput({
       </Text>
       <TextInput
         {...props}
+        accessibilityLabel={accessibilityLabel}
+        testID={testID}
         autoCapitalize="none"
         autoCorrect={false}
         placeholderTextColor={colors.textMuted}

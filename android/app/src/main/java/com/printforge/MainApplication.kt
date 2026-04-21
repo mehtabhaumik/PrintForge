@@ -9,6 +9,7 @@ import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.printforge.capability.PrinterCapabilityPackage
 import com.printforge.discovery.PrinterDiscoveryPackage
 import com.printforge.print.PrintEnginePackage
+import com.printforge.share.ShareIntentPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -20,6 +21,7 @@ class MainApplication : Application(), ReactApplication {
           add(PrinterCapabilityPackage())
           add(PrinterDiscoveryPackage())
           add(PrintEnginePackage())
+          add(ShareIntentPackage())
         },
     )
   }

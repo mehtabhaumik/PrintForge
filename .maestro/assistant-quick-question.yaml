@@ -1,0 +1,17 @@
+appId: com.printforge.app
+name: Assistant quick-question audit
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: "open-offline-assistant"
+    timeout: 60000
+- tapOn:
+    id: "open-offline-assistant"
+- assertVisible: "Quick questions"
+- tapOn: "How do I add a printer by IP?"
+- assertVisible: "How do I add a printer by IP?"
+- assertVisible: "Send"
+- tapOn: "Back"
+- assertVisible: "Connect your first printer"

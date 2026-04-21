@@ -1,0 +1,23 @@
+appId: com.printforge.app
+name: First-run dashboard audit
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Connect your first printer"
+    timeout: 60000
+- assertVisible: "PrintForge"
+- assertVisible: "Connect. Print. Scan. Simplified."
+- assertVisible: "Connect your first printer"
+- assertVisible: "Open guided setup"
+- assertVisible:
+    id: "open-offline-assistant"
+- assertVisible: "Saved Devices"
+- tapOn:
+    id: "open-offline-assistant"
+- assertVisible: "Quick questions"
+- tapOn: "Back"
+- assertVisible: "Connect your first printer"
+- scrollUntilVisible:
+    element: "Available Devices"
+    direction: DOWN

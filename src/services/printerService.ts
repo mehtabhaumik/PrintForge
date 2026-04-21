@@ -35,6 +35,7 @@ type PrinterDiscoveryNativeModule = {
 };
 
 const PRINTER_FOUND_EVENT = 'PrintForgePrinterFound';
+const JS_DISCOVERY_TIMEOUT_MS = 13000;
 const nativePrinterDiscovery = NativeModules.PrinterDiscovery as
   | PrinterDiscoveryNativeModule
   | undefined;
@@ -91,7 +92,9 @@ export const nativePrinterDiscoveryService: PrinterDiscoveryService = {
     const subscription = createEventSubscription(onPrinterFound);
 
     try {
-      const printers = await discoveryModule.getAvailablePrinters();
+      const printers = await withDiscoveryTimeout(
+        discoveryModule.getAvailablePrinters(),
+      );
 
       return {
         printers: dedupePrinters(printers.map(normalizePrinter)),
@@ -102,6 +105,19 @@ export const nativePrinterDiscoveryService: PrinterDiscoveryService = {
     }
   },
 };
+
+function withDiscoveryTimeout(promise: Promise<Printer[]>) {
+  return new Promise<Printer[]>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      resolve([]);
+    }, JS_DISCOVERY_TIMEOUT_MS);
+
+    promise
+      .then(resolve)
+      .catch(reject)
+      .finally(() => clearTimeout(timeout));
+  });
+}
 
 export function dedupePrinters(printers: Printer[]) {
   const byIp = new Map<string, Printer>();

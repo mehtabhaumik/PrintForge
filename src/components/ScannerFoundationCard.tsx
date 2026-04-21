@@ -2,8 +2,12 @@ import React from 'react';
 import {Text, View} from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 
-import type {PrinterCapabilities} from '../services/printerCapabilityService';
+import {
+  getScannerCapabilityCopy,
+  type PrinterCapabilities,
+} from '../services/printerCapabilityService';
 import {colors, glass} from '../utils/theme';
+import {ActionButton} from './ActionButton';
 import {Card} from './Card';
 
 type ScannerFoundationCardProps = {
@@ -13,7 +17,13 @@ type ScannerFoundationCardProps = {
 export function ScannerFoundationCard({
   capabilities,
 }: ScannerFoundationCardProps) {
-  const isReadyForProbe = Boolean(capabilities?.canScan);
+  const scannerCopy = getScannerCapabilityCopy(capabilities);
+  const isDetected = capabilities?.scannerStatus === 'DETECTED';
+  const indicatorColor = isDetected
+    ? colors.success
+    : capabilities?.scannerStatus === 'NEEDS_SETUP'
+      ? colors.warning
+      : colors.textMuted;
 
   return (
     <Card className="mb-5">
@@ -45,14 +55,30 @@ export function ScannerFoundationCard({
             Scan foundation
           </Text>
           <Text className="mt-2 text-xl font-semibold text-forge-primary">
-            {isReadyForProbe ? 'Scanner path found' : 'Scanner path not confirmed'}
+            {scannerCopy.title}
           </Text>
           <Text className="mt-2 text-sm leading-6 text-forge-secondary">
-            {isReadyForProbe
-              ? 'This device exposes a web service. PrintForge can build eSCL scanner checks on top of it next.'
-              : 'PrintForge is ready for scanner checks, but this device has not exposed a scan endpoint yet.'}
+            {scannerCopy.message}
           </Text>
         </View>
+      </View>
+
+      <View className="mt-5 rounded-forge border p-4" style={glass.surface}>
+        <View className="flex-row items-center">
+          <View
+            className="mr-3 h-2.5 w-2.5 rounded-full"
+            style={{backgroundColor: indicatorColor}}
+          />
+          <Text className="flex-1 text-sm leading-6 text-forge-secondary">
+            {scannerCopy.detail}
+          </Text>
+        </View>
+      </View>
+
+      <View className="mt-5">
+        <ActionButton disabled variant="secondary">
+          Scan capture coming later
+        </ActionButton>
       </View>
     </Card>
   );

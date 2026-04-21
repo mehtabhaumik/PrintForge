@@ -1,15 +1,18 @@
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import React, {useEffect} from 'react';
-import {Pressable, Text, View} from 'react-native';
+import {Text, View} from 'react-native';
 
 import {ActionButton} from '../components/ActionButton';
+import {AppHeader} from '../components/AppHeader';
 import {CapabilityStatusCard} from '../components/CapabilityStatusCard';
 import {Card} from '../components/Card';
+import {CompatibilityMemoryCard} from '../components/CompatibilityMemoryCard';
 import {DiagnosticsCard} from '../components/DiagnosticsCard';
 import {ScannerFoundationCard} from '../components/ScannerFoundationCard';
 import {Screen} from '../components/Screen';
 import {SectionHeader} from '../components/SectionHeader';
 import type {PrinterCapabilities} from '../services/printerCapabilityService';
+import {getProfileSummary} from '../services/printerProfileService';
 import type {Printer} from '../services/printerService';
 import {getPrinterStatusMessage} from '../services/printerService';
 import {usePrinterStore} from '../store/usePrinterStore';
@@ -45,6 +48,15 @@ export function PrinterDetailScreen({
   );
   const submitTestPrint = usePrinterStore(state => state.submitTestPrint);
   const printState = usePrinterStore(state => state.printState);
+  const profile = usePrinterStore(
+    state => state.printerProfiles[route.params.printerId],
+  );
+  const compatibilityMemory = usePrinterStore(
+    state => state.compatibilityMemory[route.params.printerId],
+  );
+  const clearCompatibilityMemory = usePrinterStore(
+    state => state.clearCompatibilityMemory,
+  );
 
   useEffect(() => {
     if (printer && capabilityState === 'idle') {
@@ -55,9 +67,7 @@ export function PrinterDetailScreen({
   if (!printer) {
     return (
       <Screen>
-        <Pressable onPress={() => navigation.goBack()} className="mt-2">
-          <Text className="text-sm font-semibold text-forge-secondary">Back</Text>
-        </Pressable>
+        <AppHeader navigation={navigation} showBack />
         <Card className="mt-6">
           <Text className="text-xl font-semibold text-forge-primary">
             Printer not found
@@ -74,9 +84,7 @@ export function PrinterDetailScreen({
 
   return (
     <Screen>
-      <Pressable onPress={() => navigation.goBack()} className="mb-5 mt-2">
-        <Text className="text-sm font-semibold text-forge-secondary">Back</Text>
-      </Pressable>
+      <AppHeader navigation={navigation} showBack />
 
       <SectionHeader
         eyebrow="Printer"
@@ -135,6 +143,44 @@ export function PrinterDetailScreen({
         onRetry={() => checkPrinterCapabilities(printer.id)}
       />
       <ScannerFoundationCard capabilities={capabilities} />
+
+      <SectionHeader
+        eyebrow="Local intelligence"
+        title="Compatibility memory"
+        detail="Private on-device learning helps PrintForge choose the most reliable path next time."
+      />
+      <CompatibilityMemoryCard
+        memory={compatibilityMemory}
+        onClear={() => clearCompatibilityMemory(printer.id)}
+      />
+
+      <SectionHeader
+        eyebrow="Profile"
+        title="Default print style"
+        detail="Save the way this printer should usually print, then reuse it anytime."
+      />
+      <Card className="mb-5">
+        <Text className="text-base font-semibold text-forge-primary">
+          {profile ? 'Saved for this printer' : 'No saved defaults yet'}
+        </Text>
+        <Text className="mt-2 text-sm leading-6 text-forge-secondary">
+          {profile
+            ? getProfileSummary(profile)
+            : 'Open print settings once, choose your defaults, then save them for this printer.'}
+        </Text>
+        {profile?.saveInkAndPaper ? (
+          <Text className="mt-3 text-sm text-forge-secondary">
+            Ink and paper saver is on for this printer.
+          </Text>
+        ) : null}
+        <View className="mt-5">
+          <ActionButton
+            variant="secondary"
+            onPress={() => navigation.navigate('Print', {printerId: printer.id})}>
+            Open print settings
+          </ActionButton>
+        </View>
+      </Card>
 
       <SectionHeader
         eyebrow="Assistant"

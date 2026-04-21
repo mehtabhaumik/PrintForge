@@ -123,6 +123,7 @@ export function DiscoverySearchModal({
       animationType="fade"
       transparent
       visible={visible}
+      onRequestClose={() => undefined}
       statusBarTranslucent>
       <View className="flex-1 items-center justify-center bg-black/70 px-6">
         <View

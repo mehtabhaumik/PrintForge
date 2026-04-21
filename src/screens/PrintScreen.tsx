@@ -1,51 +1,74 @@
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import React from 'react';
-import {Image, Pressable, Text, View} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {Image, Text, View} from 'react-native';
 
 import {ActionButton} from '../components/ActionButton';
+import {AppHeader} from '../components/AppHeader';
 import {Card} from '../components/Card';
 import {PrintHistoryCard} from '../components/PrintHistoryCard';
 import {PrintOptionsCard} from '../components/PrintOptionsCard';
+import {PrinterProfileCard} from '../components/PrinterProfileCard';
 import {ScanningState} from '../components/ScanningState';
 import {Screen} from '../components/Screen';
 import {SectionHeader} from '../components/SectionHeader';
 import {usePrinterStore} from '../store/usePrinterStore';
 import {RootStackParamList} from '../utils/navigation';
 import {colors} from '../utils/theme';
+import {isSystemPrintAvailable} from '../services/printService';
 
 type PrintScreenProps = NativeStackScreenProps<RootStackParamList, 'Print'>;
 
 export function PrintScreen({navigation, route}: PrintScreenProps) {
   const {
     chooseFile,
+    applyPrinterProfile,
+    diagnosePrintJob,
     latestPrintJob,
+    printerCapabilities,
+    printerProfiles,
     printAttemptLogs,
     printOptions,
     printState,
     printers,
+    reprintJob,
     selectedFile,
     selectedPrinterId,
     statusMessage,
+    savePrinterProfile,
     submitPrint,
+    submitSystemPrint,
     submitTestPrint,
+    togglePrinterSavingsMode,
+    usePrintJobSettings,
     updatePrintOptions,
   } = usePrinterStore();
 
   const printerId = route.params?.printerId ?? selectedPrinterId;
   const printer = printers.find(item => item.id === printerId);
+  const profile = printerId ? printerProfiles[printerId] : undefined;
+  const capabilities = printerId ? printerCapabilities[printerId] : undefined;
+  const appliedProfilePrinterId = useRef<string | undefined>(undefined);
   const isBusy = printState === 'selecting' || printState === 'submitting';
-  const canPrint = Boolean(selectedFile && printer && !isBusy);
+  const canSystemPrint = Boolean(selectedFile && !isBusy && isSystemPrintAvailable());
+  const canDirectPrint = Boolean(selectedFile && printer && !isBusy);
+
+  useEffect(() => {
+    if (!printerId || !profile || appliedProfilePrinterId.current === printerId) {
+      return;
+    }
+
+    appliedProfilePrinterId.current = printerId;
+    applyPrinterProfile(printerId);
+  }, [applyPrinterProfile, printerId, profile]);
 
   return (
     <Screen>
-      <Pressable onPress={() => navigation.goBack()} className="mb-5 mt-2">
-        <Text className="text-sm font-semibold text-forge-secondary">Back</Text>
-      </Pressable>
+      <AppHeader navigation={navigation} showBack />
 
       <SectionHeader
         eyebrow="Print"
         title="Choose a file and print cleanly."
-        detail="PDF, JPG, and PNG files are supported."
+        detail="Use the phone print dialog for broad compatibility, or direct print when you already chose a printer."
       />
 
       {isBusy ? (
@@ -99,6 +122,9 @@ export function PrintScreen({navigation, route}: PrintScreenProps) {
         </Text>
         <View className="mt-3 rounded-forge bg-forge-surface p-4">
           <Text className="text-sm text-forge-secondary">
+            System print · {isSystemPrintAvailable() ? 'Available' : 'Not connected here'}
+          </Text>
+          <Text className="text-sm text-forge-secondary">
             Printer · {printer?.name ?? 'Choose from printer details'}
           </Text>
           <Text className="mt-2 text-sm text-forge-secondary">
@@ -110,11 +136,36 @@ export function PrintScreen({navigation, route}: PrintScreenProps) {
           <Text className="mt-2 text-sm text-forge-secondary">
             Paper · {printOptions.paperSize} · {printOptions.colorMode}
           </Text>
+          <Text className="mt-2 text-sm text-forge-secondary">
+            Size · {printOptions.fitToPage ? 'Fit to page' : 'Actual size'} ·{' '}
+            {printOptions.orientation}
+          </Text>
         </View>
+        <Text className="mt-4 text-sm leading-6 text-forge-secondary">
+          System print opens the Android or iOS print dialog so your phone can
+          choose any supported printer. Direct print sends the file through
+          PrintForge using IPP or RAW.
+        </Text>
         <Text className="mt-4 text-sm leading-6 text-forge-muted">
           {statusMessage}
         </Text>
       </Card>
+
+      <PrinterProfileCard
+        printerName={printer?.name}
+        profile={profile}
+        capabilities={capabilities}
+        selectedFile={selectedFile}
+        canSave={Boolean(printer)}
+        saveInkAndPaper={profile?.saveInkAndPaper ?? false}
+        onApply={printerId ? () => applyPrinterProfile(printerId) : undefined}
+        onSave={printerId ? () => savePrinterProfile(printerId) : undefined}
+        onToggleSavings={
+          printerId
+            ? () => togglePrinterSavingsMode(printerId)
+            : () => undefined
+        }
+      />
 
       <PrintOptionsCard options={printOptions} onChange={updatePrintOptions} />
 
@@ -146,16 +197,29 @@ export function PrintScreen({navigation, route}: PrintScreenProps) {
         </Card>
       ) : null}
 
-      <PrintHistoryCard jobs={printAttemptLogs} limit={3} />
+      <PrintHistoryCard
+        jobs={printAttemptLogs}
+        limit={4}
+        printers={printers}
+        onReprint={reprintJob}
+        onUseSettings={usePrintJobSettings}
+        onDiagnose={diagnosePrintJob}
+      />
 
       <View className="gap-3">
         <ActionButton
-          onPress={() => submitPrint(printerId)}
-          disabled={!canPrint}>
-          {printState === 'submitting' ? 'Sending...' : 'Print'}
+          onPress={submitSystemPrint}
+          disabled={!canSystemPrint}>
+          {printState === 'submitting' ? 'Opening...' : 'Print with phone dialog'}
         </ActionButton>
         <ActionButton
           variant="secondary"
+          onPress={() => submitPrint(printerId)}
+          disabled={!canDirectPrint}>
+          {printState === 'submitting' ? 'Sending...' : 'Direct print'}
+        </ActionButton>
+        <ActionButton
+          variant="ghost"
           onPress={() => submitTestPrint(printerId)}
           disabled={!printer || isBusy}>
           Print test page

@@ -1,9 +1,10 @@
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import React, {useEffect, useState} from 'react';
-import {Pressable, Text, View} from 'react-native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {Platform, Pressable, ScrollView, Text, View} from 'react-native';
 import Svg, {Circle, Path} from 'react-native-svg';
 
 import {ActionButton} from '../components/ActionButton';
+import {AppHeader} from '../components/AppHeader';
 import {Card} from '../components/Card';
 import {DiscoveryFeedbackCard} from '../components/DiscoveryFeedbackCard';
 import {DiscoverySearchModal} from '../components/DiscoverySearchModal';
@@ -12,6 +13,10 @@ import {PrinterCard} from '../components/PrinterCard';
 import {Screen} from '../components/Screen';
 import {SectionHeader} from '../components/SectionHeader';
 import {isNativePrinterDiscoveryAvailable} from '../services/printerService';
+import {
+  getPlaybookById,
+  TroubleshootingPlaybook,
+} from '../services/troubleshootingPlaybookService';
 import type {ManualPrinterInput} from '../store/usePrinterStore';
 import {usePrinterStore} from '../store/usePrinterStore';
 import {RootStackParamList} from '../utils/navigation';
@@ -22,10 +27,13 @@ type PrinterSetupScreenProps = NativeStackScreenProps<
   'PrinterSetup'
 >;
 
-type SetupMode = 'network' | 'ip';
+type SetupMode = 'network' | 'ip' | 'help';
 
-export function PrinterSetupScreen({navigation}: PrinterSetupScreenProps) {
-  const [mode, setMode] = useState<SetupMode>('network');
+export function PrinterSetupScreen({navigation, route}: PrinterSetupScreenProps) {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [mode, setMode] = useState<SetupMode>(
+    route.params?.initialMode ?? 'network',
+  );
   const {
     addManualPrinter,
     discoveryState,
@@ -57,6 +65,30 @@ export function PrinterSetupScreen({navigation}: PrinterSetupScreenProps) {
     }
   }, [hasLoadedSavedPrinters, loadPrintHistory, loadSavedPrinters]);
 
+  const scrollToActiveSetup = useCallback(() => {
+    requestAnimationFrame(() => {
+      scrollViewRef.current?.scrollTo({y: 430, animated: true});
+    });
+  }, []);
+
+  useEffect(() => {
+    if (route.params?.initialMode && route.params.initialMode !== 'network') {
+      const timeout = setTimeout(scrollToActiveSetup, 150);
+
+      return () => clearTimeout(timeout);
+    }
+
+    return undefined;
+  }, [route.params?.initialMode, scrollToActiveSetup]);
+
+  function chooseMode(nextMode: SetupMode) {
+    setMode(nextMode);
+
+    if (nextMode !== mode) {
+      setTimeout(scrollToActiveSetup, 80);
+    }
+  }
+
   function openPrinter(printerId: string) {
     selectPrinter(printerId);
     navigation.navigate('PrinterDetail', {printerId});
@@ -73,10 +105,8 @@ export function PrinterSetupScreen({navigation}: PrinterSetupScreenProps) {
   }
 
   return (
-    <Screen>
-      <Pressable onPress={() => navigation.goBack()} className="mb-5 mt-2">
-        <Text className="text-sm font-semibold text-forge-secondary">Back</Text>
-      </Pressable>
+    <Screen scrollRef={scrollViewRef}>
+      <AppHeader navigation={navigation} showBack />
 
       <SectionHeader
         eyebrow="Setup"
@@ -95,29 +125,38 @@ export function PrinterSetupScreen({navigation}: PrinterSetupScreenProps) {
           Search the current Wi-Fi network first, or add the printer directly
           with its IP address.
         </Text>
-        <View className="mt-5 flex-row gap-3">
-          <View className="flex-1">
-            <ActionButton
-              variant={mode === 'network' ? 'primary' : 'secondary'}
-              disabled={isScanning}
-              onPress={() => setMode('network')}>
-              Use Wi-Fi
-            </ActionButton>
-          </View>
-          <View className="flex-1">
-            <ActionButton
-              variant={mode === 'ip' ? 'primary' : 'secondary'}
-              disabled={isScanning}
-              onPress={() => setMode('ip')}>
-              Add by IP
-            </ActionButton>
-          </View>
+        <View className="mt-5 gap-3">
+          <SetupChoice
+            label="Search Wi-Fi"
+            testID="setup-choice-network"
+            detail="Find printers and scanners near this phone."
+            selected={mode === 'network'}
+            disabled={isScanning}
+            onPress={() => chooseMode('network')}
+          />
+          <SetupChoice
+            label="Add by IP"
+            testID="setup-choice-ip"
+            detail="Enter the printer address directly."
+            selected={mode === 'ip'}
+            disabled={isScanning}
+            onPress={() => chooseMode('ip')}
+          />
+          <SetupChoice
+            label="Help me troubleshoot"
+            testID="setup-choice-help"
+            detail="Check Wi-Fi, sleep mode, VPN, and guest network basics."
+            selected={mode === 'help'}
+            disabled={isScanning}
+            onPress={() => chooseMode('help')}
+          />
         </View>
       </Card>
 
       {mode === 'network' ? (
         <NetworkSetup
           availablePrinters={availablePrinters}
+          discoveredPrinters={printers}
           discoveryState={discoveryState}
           hasCompletedDiscovery={hasCompletedDiscovery}
           isDiscoveryAvailable={isDiscoveryAvailable}
@@ -125,13 +164,20 @@ export function PrinterSetupScreen({navigation}: PrinterSetupScreenProps) {
           lastDiscoveryFoundCount={lastDiscoveryFoundCount}
           onOpenPrinter={openPrinter}
           onScan={scanForPrinters}
-          onUseIp={() => setMode('ip')}
+          onUseIp={() => chooseMode('ip')}
         />
       ) : (
-        <IpSetup
-          isBusy={discoveryState === 'scanning'}
-          onAdd={addManualPrinterAndOpen}
-        />
+        mode === 'ip' ? (
+          <IpSetup
+            isBusy={discoveryState === 'scanning'}
+            onAdd={addManualPrinterAndOpen}
+          />
+        ) : (
+          <TroubleshootingSetup
+            onUseIp={() => chooseMode('ip')}
+            onUseNetwork={() => chooseMode('network')}
+          />
+        )
       )}
     </Screen>
   );
@@ -139,6 +185,7 @@ export function PrinterSetupScreen({navigation}: PrinterSetupScreenProps) {
 
 function NetworkSetup({
   availablePrinters,
+  discoveredPrinters,
   discoveryState,
   hasCompletedDiscovery,
   isDiscoveryAvailable,
@@ -149,6 +196,7 @@ function NetworkSetup({
   onUseIp,
 }: {
   availablePrinters: ReturnType<typeof usePrinterStore.getState>['printers'];
+  discoveredPrinters: ReturnType<typeof usePrinterStore.getState>['printers'];
   discoveryState: ReturnType<typeof usePrinterStore.getState>['discoveryState'];
   hasCompletedDiscovery: boolean;
   isDiscoveryAvailable: boolean;
@@ -159,13 +207,46 @@ function NetworkSetup({
   onUseIp: () => void;
 }) {
   const isScanning = discoveryState === 'scanning';
+  const [isModalDismissed, setIsModalDismissed] = useState(false);
+  const [isSearchDialogVisible, setIsSearchDialogVisible] = useState(false);
+
+  useEffect(() => {
+    if (isScanning) {
+      setIsModalDismissed(false);
+      setIsSearchDialogVisible(true);
+    }
+  }, [isScanning]);
+
+  useEffect(() => {
+    if (isScanning || !isSearchDialogVisible) {
+      return undefined;
+    }
+
+    const timeout = setTimeout(() => {
+      setIsSearchDialogVisible(false);
+    }, 2500);
+
+    return () => clearTimeout(timeout);
+  }, [isScanning, isSearchDialogVisible]);
+
+  function selectDevice(printerId: string) {
+    setIsModalDismissed(true);
+    setIsSearchDialogVisible(false);
+    onOpenPrinter(printerId);
+  }
+
+  function startScan() {
+    setIsModalDismissed(false);
+    setIsSearchDialogVisible(true);
+    onScan();
+  }
 
   return (
     <>
       <DiscoverySearchModal
-        visible={isScanning}
-        devices={availablePrinters}
-        onSelectDevice={onOpenPrinter}
+        visible={isSearchDialogVisible && !isModalDismissed}
+        devices={discoveredPrinters}
+        onSelectDevice={selectDevice}
       />
 
       <Card className="mb-5">
@@ -181,12 +262,14 @@ function NetworkSetup({
         </Text>
         <View className="mt-5">
           <ActionButton
-            onPress={onScan}
+            accessibilityLabel="Start Wi-Fi search"
+            testID="setup-search-wifi-button"
+            onPress={startScan}
             disabled={!isDiscoveryAvailable || isScanning}>
             {isScanning
               ? 'Searching Wi-Fi...'
               : isDiscoveryAvailable
-                ? 'Search Wi-Fi'
+                ? 'Start Wi-Fi search'
                 : 'Discovery unavailable'}
           </ActionButton>
         </View>
@@ -284,6 +367,143 @@ function IpSetup({
         ))}
       </Card>
     </>
+  );
+}
+
+function TroubleshootingSetup({
+  onUseIp,
+  onUseNetwork,
+}: {
+  onUseIp: () => void;
+  onUseNetwork: () => void;
+}) {
+  return (
+    <>
+      <Card className="mb-5">
+        <Text className="text-xs font-semibold uppercase text-forge-muted">
+          Step 2
+        </Text>
+        <Text className="mt-2 text-xl font-semibold text-forge-primary">
+          Quick setup checks
+        </Text>
+        <Text className="mt-2 text-sm leading-6 text-forge-secondary">
+          These checks solve most printer discovery issues without technical
+          setup.
+        </Text>
+
+        <View className="mt-5 gap-3">
+          {[
+            'Keep the phone and printer on the same Wi-Fi network.',
+            'Turn off VPN while searching for local printers.',
+            'Avoid guest Wi-Fi networks because they often block devices from seeing each other.',
+            'Wake the printer and wait about ten seconds before searching.',
+            'Open the printer network page if you want to copy its IP address.',
+          ].map(item => (
+            <View
+              key={item}
+              className="rounded-forge border border-forge-border bg-forge-surface/70 px-4 py-3">
+              <Text className="text-sm leading-6 text-forge-secondary">
+                {item}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      {setupPlaybooks.map(playbook => (
+        <SetupPlaybookCard key={playbook.id} playbook={playbook} />
+      ))}
+
+      <View className="mb-5 gap-3">
+        <ActionButton onPress={onUseNetwork}>Use Wi-Fi search</ActionButton>
+        <ActionButton variant="secondary" onPress={onUseIp}>
+          Add by IP address
+        </ActionButton>
+      </View>
+    </>
+  );
+}
+
+const setupPlaybooks = [
+  getPlaybookById('printer-not-found'),
+  getPlaybookById('guest-network'),
+  getPlaybookById('vpn-blocking'),
+  getPlaybookById('printer-asleep'),
+  getPlaybookById(Platform.OS === 'ios' ? 'ios-local-network' : 'android-network-restrictions'),
+].filter((playbook): playbook is TroubleshootingPlaybook => Boolean(playbook));
+
+function SetupPlaybookCard({playbook}: {playbook: TroubleshootingPlaybook}) {
+  return (
+    <Card className="mb-5">
+      <Text className="text-xs font-semibold uppercase text-forge-muted">
+        Playbook
+      </Text>
+      <Text className="mt-2 text-lg font-semibold text-forge-primary">
+        {playbook.title}
+      </Text>
+      <Text className="mt-2 text-sm leading-6 text-forge-secondary">
+        {playbook.summary}
+      </Text>
+      <View className="mt-4 gap-2">
+        {playbook.steps.slice(0, 3).map((step, index) => (
+          <View
+            key={step}
+            className="rounded-forge border border-forge-border bg-forge-surface/70 px-4 py-3">
+            <Text className="text-sm leading-6 text-forge-secondary">
+              {index + 1}. {step}
+            </Text>
+          </View>
+        ))}
+      </View>
+      <Text className="mt-4 text-sm leading-6 text-forge-muted">
+        {playbook.nextAction}
+      </Text>
+    </Card>
+  );
+}
+
+function SetupChoice({
+  label,
+  testID,
+  detail,
+  selected,
+  disabled,
+  onPress,
+}: {
+  label: string;
+  testID: string;
+  detail: string;
+  selected: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      testID={testID}
+      disabled={disabled}
+      hitSlop={8}
+      pressRetentionOffset={12}
+      className={`rounded-forge border px-4 py-3 ${
+        disabled ? 'opacity-50' : 'opacity-100'
+      }`}
+      style={selected ? glass.highlight : glass.surface}
+      onPress={onPress}>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-1 pr-3">
+          <Text className="text-sm font-semibold text-forge-primary">
+            {label}
+          </Text>
+          <Text className="mt-1 text-xs leading-5 text-forge-secondary">
+            {detail}
+          </Text>
+        </View>
+        <Text className="text-xs font-semibold uppercase text-forge-muted">
+          {selected ? 'Selected' : 'Choose'}
+        </Text>
+      </View>
+    </Pressable>
   );
 }
 

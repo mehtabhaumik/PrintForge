@@ -1,3 +1,7 @@
+import {
+  CompatibilityMemory,
+  getCompatibilityDiagnosticCopy,
+} from './compatibilityMemoryService';
 import {PrinterCapabilities} from './printerCapabilityService';
 import {Printer} from './printerService';
 import {PrintJob} from './printService';
@@ -17,6 +21,7 @@ type DiagnosticInput = {
   discoveredPrinters: Printer[];
   capabilities?: PrinterCapabilities;
   printAttempts: PrintJob[];
+  compatibilityMemory?: CompatibilityMemory;
 };
 
 const HIGH_LATENCY_MS = 2500;
@@ -27,10 +32,13 @@ export function buildPrinterDiagnostic({
   discoveredPrinters,
   capabilities,
   printAttempts,
+  compatibilityMemory,
 }: DiagnosticInput): PrinterDiagnostic {
   const matchingAttempts = printAttempts.filter(attempt => attempt.printerId === printer.id);
   const latestAttempt = matchingAttempts[matchingAttempts.length - 1];
   const subnetMismatch = hasSubnetMismatch(printer, discoveredPrinters);
+  const compatibilityDiagnostic =
+    getCompatibilityDiagnosticCopy(compatibilityMemory);
 
   if (latestAttempt?.errorCode === 'PRINTER_OFFLINE') {
     return {
@@ -84,6 +92,10 @@ export function buildPrinterDiagnostic({
       suggestion: 'Connect both devices to the same Wi-Fi network and search again.',
       severity: 'warning',
     };
+  }
+
+  if (compatibilityDiagnostic) {
+    return compatibilityDiagnostic;
   }
 
   if (capabilities?.latencyMs && capabilities.latencyMs >= HIGH_LATENCY_MS) {

@@ -7,23 +7,23 @@ import {Card} from './Card';
 
 type DiscoveryEmptyStateProps = {
   isDiscoveryAvailable: boolean;
+  hasCompletedDiscovery?: boolean;
+  completedAt?: string;
 };
 
 export function DiscoveryEmptyState({
   isDiscoveryAvailable,
+  hasCompletedDiscovery = false,
+  completedAt,
 }: DiscoveryEmptyStateProps) {
-  const title = isDiscoveryAvailable
-    ? 'No available devices yet'
-    : 'Discovery is not available here';
-  const message = isDiscoveryAvailable
-    ? 'Start printer setup when you are ready to search Wi-Fi or add a printer by IP address.'
-    : 'This demo can show the app flow, but live network discovery needs a native discovery module on this platform.';
+  const title = getTitle(isDiscoveryAvailable, hasCompletedDiscovery);
+  const message = getMessage(
+    isDiscoveryAvailable,
+    hasCompletedDiscovery,
+    completedAt,
+  );
   const suggestions = isDiscoveryAvailable
-    ? [
-        'Use guided setup to search the current Wi-Fi network.',
-        'Add by IP if your printer does not appear automatically.',
-        'Saved printers will stay on this dashboard after you connect once.',
-      ]
+    ? getDiscoverySuggestions(hasCompletedDiscovery)
     : [
         'Use the Android build to test live printer discovery today.',
         'You can still add a printer by IP address from setup.',
@@ -62,6 +62,65 @@ export function DiscoveryEmptyState({
       </View>
     </Card>
   );
+}
+
+function getTitle(isDiscoveryAvailable: boolean, hasCompletedDiscovery: boolean) {
+  if (!isDiscoveryAvailable) {
+    return 'Discovery is not available here';
+  }
+
+  return hasCompletedDiscovery
+    ? 'No printers or scanners found'
+    : 'No available devices yet';
+}
+
+function getMessage(
+  isDiscoveryAvailable: boolean,
+  hasCompletedDiscovery: boolean,
+  completedAt?: string,
+) {
+  if (!isDiscoveryAvailable) {
+    return 'This demo can show the app flow, but live network discovery needs a native discovery module on this platform.';
+  }
+
+  if (hasCompletedDiscovery) {
+    return `We checked this network${formatCompletedAt(completedAt)} but could not see a nearby device yet.`;
+  }
+
+  return 'Open guided setup when you are ready to search Wi-Fi, add a printer by IP address, or get help with setup.';
+}
+
+function getDiscoverySuggestions(hasCompletedDiscovery: boolean) {
+  if (hasCompletedDiscovery) {
+    return [
+      'Make sure your phone and printer use the same Wi-Fi.',
+      'Wake the printer and wait about ten seconds.',
+      'Use guided setup to add the printer by IP address if it does not appear.',
+    ];
+  }
+
+  return [
+    'Use guided setup to search the current Wi-Fi network.',
+    'Add by IP if your printer does not appear automatically.',
+    'Saved printers will stay on this dashboard after you connect once.',
+  ];
+}
+
+function formatCompletedAt(value?: string) {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return ` at ${date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`;
 }
 
 function DeviceSearchIcon() {

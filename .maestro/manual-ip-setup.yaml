@@ -1,0 +1,22 @@
+appId: com.printforge.app
+name: Manual IP setup audit
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Open guided setup"
+    timeout: 60000
+- tapOn:
+    id: "open-guided-setup"
+- assertVisible: "Add a printer"
+- tapOn:
+    id: "setup-choice-ip"
+- assertVisible: "Enter the printer address"
+- assertVisible: "Finding the IP"
+- tapOn:
+    id: "manual-printer-ip"
+- inputText: "192.168.1.24"
+- tapOn:
+    id: "manual-printer-name"
+- inputText: "Office Printer"
+- assertVisible: "Add printer"

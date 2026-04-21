@@ -7,18 +7,22 @@ import {formatFileSize} from '../utils/format';
 
 export type PrintableMimeType = 'application/pdf' | 'image/jpeg' | 'image/png';
 export type PrintProtocol = 'IPP' | 'RAW';
+export type PrintProtocolUsed = PrintProtocol | 'SYSTEM' | 'UNKNOWN';
 export type PrintJobStatus = 'completed' | 'failed';
 export type PrintColorMode = 'auto' | 'color' | 'grayscale';
 export type PrintDuplexMode = 'off' | 'long-edge' | 'short-edge';
+export type PrintOrientation = 'auto' | 'portrait' | 'landscape';
 export type PrintPaperSize = 'Letter' | 'A4' | 'Legal';
-export type PrintQuality = 'standard' | 'high';
+export type PrintQuality = 'draft' | 'standard' | 'high';
 
 export type PrintOptions = {
   copies: number;
   colorMode: PrintColorMode;
   duplex: PrintDuplexMode;
   paperSize: PrintPaperSize;
+  orientation: PrintOrientation;
   quality: PrintQuality;
+  fitToPage: boolean;
 };
 
 export type PrintableFile = {
@@ -33,10 +37,15 @@ export type PrintableFile = {
 export type PrintJob = {
   id: string;
   printerId?: string;
+  printerName?: string;
+  printerIp?: string;
+  printerPort?: number;
+  diagnosticCode?: string;
+  isTestPage?: boolean;
   file: PrintableFile;
   options: PrintOptions;
   status: PrintJobStatus;
-  protocolUsed: PrintProtocol | 'UNKNOWN';
+  protocolUsed: PrintProtocolUsed;
   attempts: number;
   latencyMs: number;
   message: string;
@@ -57,7 +66,7 @@ export type PrintErrorCode =
 type NativePrintJobResult = {
   jobId: string;
   status: PrintJobStatus;
-  protocolUsed: PrintProtocol | 'UNKNOWN';
+  protocolUsed: PrintProtocolUsed;
   attempts: number;
   latencyMs: number;
   message: string;
@@ -78,6 +87,8 @@ type NativeTestPrintRequest = {
   ip: string;
   port: number;
   protocol: PrintProtocol;
+  printerName: string;
+  diagnosticCode: string;
   options?: PrintOptions;
 };
 
@@ -88,9 +99,39 @@ type PrintEngineNativeModule = {
   ): Promise<NativePrintJobResult>;
 };
 
+type SystemPrintNativeModule = {
+  printFile(request: {
+    fileUri: string;
+    fileName: string;
+    mimeType: PrintableMimeType;
+    options?: PrintOptions;
+  }): Promise<NativePrintJobResult>;
+};
+
+type SharedPrintableFilePayload = {
+  uri: string;
+  name?: string | null;
+  type?: string | null;
+  size?: number | null;
+};
+
+type ShareIntentNativeModule = {
+  getInitialSharedFile(): Promise<SharedPrintableFilePayload | null>;
+};
+
 const nativePrintEngine = NativeModules.PrintEngine as
   | PrintEngineNativeModule
   | undefined;
+const nativeSystemPrint = NativeModules.SystemPrint as
+  | SystemPrintNativeModule
+  | undefined;
+const nativeShareIntent = NativeModules.PrintForgeShare as
+  | ShareIntentNativeModule
+  | undefined;
+
+export function isSystemPrintAvailable() {
+  return Boolean(nativeSystemPrint) && (Platform.OS === 'android' || Platform.OS === 'ios');
+}
 
 export async function pickPrintableFile(): Promise<PrintableFile | null> {
   try {
@@ -125,18 +166,38 @@ export async function pickPrintableFile(): Promise<PrintableFile | null> {
   }
 }
 
+export async function getInitialSharedPrintableFile() {
+  if (!nativeShareIntent) {
+    return null;
+  }
+
+  try {
+    const sharedFile = await nativeShareIntent.getInitialSharedFile();
+
+    if (!sharedFile) {
+      return null;
+    }
+
+    return normalizePrintableFileFromPayload(sharedFile);
+  } catch {
+    return null;
+  }
+}
+
 export async function createPrintJob({
   file,
   printer,
   capabilities,
   options = DEFAULT_PRINT_OPTIONS,
+  preferredProtocol,
 }: {
   file: PrintableFile;
   printer: Printer;
   capabilities?: PrinterCapabilities;
   options?: PrintOptions;
+  preferredProtocol?: PrintProtocol;
 }): Promise<PrintJob> {
-  const protocol = resolvePrintProtocol(printer, capabilities);
+  const protocol = preferredProtocol ?? resolvePrintProtocol(printer, capabilities);
   const port = resolvePrintPort(printer, protocol);
   const result = await submitNativePrintJob({
     ip: printer.ip,
@@ -151,8 +212,40 @@ export async function createPrintJob({
   return {
     id: result.jobId,
     printerId: printer.id,
+    printerName: printer.name,
+    printerIp: printer.ip,
+    printerPort: port,
     file,
     options: normalizePrintOptions(options),
+    status: result.status,
+    protocolUsed: result.protocolUsed,
+    attempts: result.attempts,
+    latencyMs: result.latencyMs,
+    message: result.message,
+    errorCode: result.errorCode ?? undefined,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export async function createSystemPrintJob({
+  file,
+  options = DEFAULT_PRINT_OPTIONS,
+}: {
+  file: PrintableFile;
+  options?: PrintOptions;
+}): Promise<PrintJob> {
+  const normalizedOptions = normalizePrintOptions(options);
+  const result = await submitSystemPrintJob({
+    fileUri: file.uri,
+    fileName: file.name,
+    mimeType: file.type,
+    options: normalizedOptions,
+  });
+
+  return {
+    id: result.jobId,
+    file,
+    options: normalizedOptions,
     status: result.status,
     protocolUsed: result.protocolUsed,
     attempts: result.attempts,
@@ -167,24 +260,34 @@ export async function createTestPrintJob({
   printer,
   capabilities,
   options = DEFAULT_PRINT_OPTIONS,
+  preferredProtocol,
 }: {
   printer: Printer;
   capabilities?: PrinterCapabilities;
   options?: PrintOptions;
+  preferredProtocol?: PrintProtocol;
 }): Promise<PrintJob> {
-  const protocol = resolvePrintProtocol(printer, capabilities);
+  const protocol = preferredProtocol ?? resolvePrintProtocol(printer, capabilities);
   const port = resolvePrintPort(printer, protocol);
   const normalizedOptions = normalizePrintOptions(options);
+  const diagnosticCode = createDiagnosticCode(printer, protocol);
   const result = await submitNativeTestPrintJob({
     ip: printer.ip,
     port,
     protocol,
+    printerName: printer.name,
+    diagnosticCode,
     options: normalizedOptions,
   });
 
   return {
     id: result.jobId,
     printerId: printer.id,
+    printerName: printer.name,
+    printerIp: printer.ip,
+    printerPort: port,
+    diagnosticCode,
+    isTestPage: true,
     file: TEST_PRINT_FILE,
     options: normalizedOptions,
     status: result.status,
@@ -202,7 +305,9 @@ export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   colorMode: 'auto',
   duplex: 'off',
   paperSize: 'Letter',
+  orientation: 'auto',
   quality: 'standard',
+  fitToPage: true,
 };
 
 export function resolvePrintProtocol(
@@ -258,6 +363,67 @@ export function printErrorMessage(errorCode?: PrintErrorCode) {
   }
 
   return 'We could not send this print. Please try again.';
+}
+
+export function getFriendlyPrintFailureReason(printJob: PrintJob) {
+  if (printJob.status === 'completed') {
+    return 'Sent successfully.';
+  }
+
+  return printErrorMessage(printJob.errorCode);
+}
+
+function normalizePrintableFileFromPayload(
+  payload: SharedPrintableFilePayload,
+): PrintableFile | null {
+  const fileName = payload.name?.trim() || 'Shared file';
+  const mimeType = inferPrintableMimeType(payload.type, fileName);
+
+  if (!mimeType || !payload.uri) {
+    return null;
+  }
+
+  return {
+    uri: payload.uri,
+    name: fileName,
+    type: mimeType,
+    size: typeof payload.size === 'number' ? payload.size : null,
+    sizeLabel: formatFileSize(typeof payload.size === 'number' ? payload.size : null),
+    previewKind: mimeType === 'application/pdf' ? 'pdf' : 'image',
+  };
+}
+
+async function submitSystemPrintJob(request: {
+  fileUri: string;
+  fileName: string;
+  mimeType: PrintableMimeType;
+  options: PrintOptions;
+}): Promise<NativePrintJobResult> {
+  if (!isSystemPrintAvailable() || !nativeSystemPrint) {
+    return {
+      jobId: `system-${Date.now()}`,
+      status: 'failed',
+      protocolUsed: 'SYSTEM',
+      attempts: 1,
+      latencyMs: 0,
+      message: 'System printing is not connected on this device yet.',
+      errorCode: 'PRINT_FAILED',
+    };
+  }
+
+  try {
+    return await nativeSystemPrint.printFile(request);
+  } catch {
+    return {
+      jobId: `system-${Date.now()}`,
+      status: 'failed',
+      protocolUsed: 'SYSTEM',
+      attempts: 1,
+      latencyMs: 0,
+      message: 'We could not open the system print dialog. Try direct print instead.',
+      errorCode: 'PRINT_FAILED',
+    };
+  }
 }
 
 async function submitNativePrintJob(
@@ -355,6 +521,12 @@ function inferPrintableMimeType(
   return null;
 }
 
+function createDiagnosticCode(printer: Printer, protocol: PrintProtocol) {
+  const compactIp = printer.ip.replace(/\D/g, '').slice(-6).padStart(6, '0');
+  const timestamp = Date.now().toString(36).toUpperCase().slice(-5);
+  return `PF-${protocol}-${compactIp}-${timestamp}`;
+}
+
 export class PrintableFileError extends Error {
   constructor(
     public readonly code: PrintErrorCode,
@@ -379,7 +551,15 @@ export function normalizePrintOptions(options: PrintOptions): PrintOptions {
       options.paperSize === 'A4' || options.paperSize === 'Legal'
         ? options.paperSize
         : 'Letter',
-    quality: options.quality === 'high' ? 'high' : 'standard',
+    orientation:
+      options.orientation === 'portrait' || options.orientation === 'landscape'
+        ? options.orientation
+        : 'auto',
+    quality:
+      options.quality === 'draft' || options.quality === 'high'
+        ? options.quality
+        : 'standard',
+    fitToPage: options.fitToPage !== false,
   };
 }
 

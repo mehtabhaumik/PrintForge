@@ -4,6 +4,7 @@ import {Text, View} from 'react-native';
 import type {
   PrintColorMode,
   PrintDuplexMode,
+  PrintOrientation,
   PrintOptions,
   PrintPaperSize,
   PrintQuality,
@@ -89,10 +90,30 @@ export function PrintOptionsCard({options, onChange}: PrintOptionsCardProps) {
         label="Quality"
         value={options.quality}
         options={[
+          ['draft', 'Draft'],
           ['standard', 'Standard'],
           ['high', 'High'],
         ]}
         onSelect={value => onChange({quality: value as PrintQuality})}
+      />
+      <OptionGroup
+        label="Orientation"
+        value={options.orientation}
+        options={[
+          ['auto', 'Auto'],
+          ['portrait', 'Portrait'],
+          ['landscape', 'Landscape'],
+        ]}
+        onSelect={value => onChange({orientation: value as PrintOrientation})}
+      />
+      <OptionGroup
+        label="Size"
+        value={options.fitToPage ? 'fit' : 'actual'}
+        options={[
+          ['fit', 'Fit page'],
+          ['actual', 'Actual size'],
+        ]}
+        onSelect={value => onChange({fitToPage: value === 'fit'})}
       />
     </Card>
   );

@@ -1,0 +1,20 @@
+appId: com.printforge.app
+name: Network discovery modal audit
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Open guided setup"
+    timeout: 60000
+- tapOn:
+    id: "open-guided-setup"
+- assertVisible: "Search your Wi-Fi network"
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    id: "setup-search-wifi-button"
+- assertVisible: "Searching your Wi-Fi"
+- extendedWaitUntil:
+    notVisible: "Searching your Wi-Fi"
+    timeout: 45000
+- assertVisible: "Search your Wi-Fi network"

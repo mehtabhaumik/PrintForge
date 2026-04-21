@@ -2,6 +2,7 @@ import React, {useRef, useState} from 'react';
 import {Animated, Pressable, Text, TextInput, View} from 'react-native';
 
 import type {SavedPrinter} from '../store/usePrinterStore';
+import {getPrintReadinessCopy} from '../services/printerReadinessService';
 import {colors, glass, shadows} from '../utils/theme';
 import {ActionButton} from './ActionButton';
 
@@ -12,6 +13,9 @@ type SavedPrinterCardProps = {
   onPress: () => void;
   onRename: (name: string) => void;
   onRemove: () => void;
+  onCheckHealth: () => void;
+  onFindAgain: () => void;
+  onEditIp: () => void;
 };
 
 export function SavedPrinterCard({
@@ -21,11 +25,17 @@ export function SavedPrinterCard({
   onPress,
   onRename,
   onRemove,
+  onCheckHealth,
+  onFindAgain,
+  onEditIp,
 }: SavedPrinterCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(printer.name);
   const scale = useRef(new Animated.Value(1)).current;
   const health = getSavedPrinterHealth(printer, isAvailableNow);
+  const readinessCopy = getPrintReadinessCopy(
+    printer.readinessStatus ?? 'UNKNOWN',
+  );
 
   function animatePress(toValue: number) {
     Animated.spring(scale, {
@@ -79,6 +89,9 @@ export function SavedPrinterCard({
             <Text className="mt-2 text-xs text-forge-muted">
               Last used {formatSavedPrinterDate(printer.lastUsedAt)}
             </Text>
+            <Text className="mt-1 text-xs text-forge-muted">
+              Last checked {formatOptionalSavedPrinterDate(printer.lastCheckedAt)}
+            </Text>
           </View>
           <View className="items-end gap-2">
             {isLastUsed ? (
@@ -103,9 +116,21 @@ export function SavedPrinterCard({
           </View>
         </View>
 
-        <View className="mt-4 flex-row gap-3">
+        <View className="mt-4 rounded-forge border border-forge-border bg-forge-surface/60 px-4 py-3">
+          <Text className="text-sm font-semibold text-forge-primary">
+            {readinessCopy.message}
+          </Text>
+          {shouldShowRecoveryHint(printer) ? (
+            <Text className="mt-1 text-xs leading-5 text-forge-secondary">
+              Try again, search Wi-Fi, or update the IP address if this printer
+              moved to another network.
+            </Text>
+          ) : null}
+        </View>
+
+        <View className="mt-4 gap-3">
           {isEditing ? (
-            <>
+            <View className="flex-row gap-3">
               <View className="flex-1">
                 <ActionButton variant="secondary" onPress={saveName}>
                   Save
@@ -121,15 +146,34 @@ export function SavedPrinterCard({
                   Cancel
                 </ActionButton>
               </View>
-            </>
+            </View>
           ) : (
             <>
-              <View className="flex-1">
-                <ActionButton variant="secondary" onPress={() => setIsEditing(true)}>
-                  Rename
-                </ActionButton>
+              <View className="flex-row gap-3">
+                <View className="flex-1">
+                  <ActionButton variant="secondary" onPress={onCheckHealth}>
+                    Try again
+                  </ActionButton>
+                </View>
+                <View className="flex-1">
+                  <ActionButton variant="secondary" onPress={onFindAgain}>
+                    Find again
+                  </ActionButton>
+                </View>
               </View>
-              <View className="flex-1">
+              <View className="flex-row gap-3">
+                <View className="flex-1">
+                  <ActionButton variant="ghost" onPress={onEditIp}>
+                    Edit IP
+                  </ActionButton>
+                </View>
+                <View className="flex-1">
+                  <ActionButton variant="ghost" onPress={() => setIsEditing(true)}>
+                    Rename
+                  </ActionButton>
+                </View>
+              </View>
+              <View>
                 <ActionButton variant="ghost" onPress={onRemove}>
                   Remove
                 </ActionButton>
@@ -143,16 +187,32 @@ export function SavedPrinterCard({
 }
 
 function getSavedPrinterHealth(printer: SavedPrinter, isAvailableNow: boolean) {
-  if (isAvailableNow || printer.healthStatus === 'seen-now') {
+  if (printer.readinessStatus === 'SLOW') {
     return {
-      label: 'Seen now',
+      label: 'Slow',
+      color: colors.warning,
+      backgroundColor: 'rgba(250, 204, 21, 0.12)',
+      borderColor: 'rgba(250, 204, 21, 0.22)',
+    };
+  }
+
+  if (
+    isAvailableNow ||
+    printer.healthStatus === 'seen-now' ||
+    printer.readinessStatus === 'READY'
+  ) {
+    return {
+      label: 'Ready',
       color: colors.success,
       backgroundColor: 'rgba(74, 222, 128, 0.12)',
       borderColor: 'rgba(74, 222, 128, 0.22)',
     };
   }
 
-  if (printer.healthStatus === 'offline') {
+  if (
+    printer.healthStatus === 'offline' ||
+    printer.readinessStatus === 'SLEEPING_OR_OFFLINE'
+  ) {
     return {
       label: 'Offline',
       color: colors.error,
@@ -162,11 +222,19 @@ function getSavedPrinterHealth(printer: SavedPrinter, isAvailableNow: boolean) {
   }
 
   return {
-    label: 'Check',
+    label: printer.readinessStatus === 'UNKNOWN' ? 'Unknown' : 'Check',
     color: colors.warning,
     backgroundColor: 'rgba(250, 204, 21, 0.12)',
     borderColor: 'rgba(250, 204, 21, 0.22)',
   };
+}
+
+function shouldShowRecoveryHint(printer: SavedPrinter) {
+  return (
+    printer.readinessStatus === 'SLEEPING_OR_OFFLINE' ||
+    printer.readinessStatus === 'NEEDS_ATTENTION' ||
+    printer.healthStatus === 'offline'
+  );
 }
 
 function formatSavedPrinterDate(value: string) {
@@ -179,5 +247,22 @@ function formatSavedPrinterDate(value: string) {
   return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
+  });
+}
+
+function formatOptionalSavedPrinterDate(value?: string) {
+  if (!value) {
+    return 'not yet';
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'recently';
+  }
+
+  return date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
   });
 }

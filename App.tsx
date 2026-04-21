@@ -9,6 +9,7 @@ import {enableScreens} from 'react-native-screens';
 
 import {SplashScreen} from './src/components/SplashScreen';
 import {AssistantScreen} from './src/screens/AssistantScreen';
+import {FounderStoryScreen} from './src/screens/FounderStoryScreen';
 import {HomeScreen} from './src/screens/HomeScreen';
 import {PrintScreen} from './src/screens/PrintScreen';
 import {PrinterDetailScreen} from './src/screens/PrinterDetailScreen';
@@ -32,6 +33,7 @@ function AppNavigator() {
         }}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Assistant" component={AssistantScreen} />
+        <Stack.Screen name="FounderStory" component={FounderStoryScreen} />
         <Stack.Screen name="PrinterSetup" component={PrinterSetupScreen} />
         <Stack.Screen name="PrinterDetail" component={PrinterDetailScreen} />
         <Stack.Screen name="Print" component={PrintScreen} />

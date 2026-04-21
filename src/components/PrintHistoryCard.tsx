@@ -1,17 +1,34 @@
 import React from 'react';
 import {Text, View} from 'react-native';
 
-import type {PrintJob} from '../services/printService';
+import {
+  getFriendlyPrintFailureReason,
+  type PrintJob,
+} from '../services/printService';
+import type {Printer} from '../services/printerService';
 import {colors, glass} from '../utils/theme';
+import {ActionButton} from './ActionButton';
 import {Card} from './Card';
 
 type PrintHistoryCardProps = {
   jobs: PrintJob[];
   limit?: number;
+  printers?: Printer[];
+  onReprint?: (printJobId: string) => void;
+  onUseSettings?: (printJobId: string) => void;
+  onDiagnose?: (printJobId: string) => void;
 };
 
-export function PrintHistoryCard({jobs, limit = 4}: PrintHistoryCardProps) {
+export function PrintHistoryCard({
+  jobs,
+  limit = 4,
+  printers = [],
+  onReprint,
+  onUseSettings,
+  onDiagnose,
+}: PrintHistoryCardProps) {
   const visibleJobs = jobs.slice(0, limit);
+  const showActions = Boolean(onReprint || onUseSettings || onDiagnose);
 
   return (
     <Card className="mb-5">
@@ -35,7 +52,11 @@ export function PrintHistoryCard({jobs, limit = 4}: PrintHistoryCardProps) {
                     {job.file.name}
                   </Text>
                   <Text className="mt-1 text-xs text-forge-muted">
+                    {printerLabelFor(job, printers)}
+                  </Text>
+                  <Text className="mt-1 text-xs text-forge-muted">
                     {formatJobDate(job.createdAt)} · {job.protocolUsed}
+                    {job.diagnosticCode ? ` · ${job.diagnosticCode}` : ''}
                   </Text>
                 </View>
                 <Text
@@ -48,8 +69,35 @@ export function PrintHistoryCard({jobs, limit = 4}: PrintHistoryCardProps) {
                 </Text>
               </View>
               <Text className="mt-2 text-sm leading-5 text-forge-secondary">
-                {job.message}
+                {job.status === 'completed'
+                  ? job.message
+                  : getFriendlyPrintFailureReason(job)}
               </Text>
+              {showActions ? (
+                <View className="mt-4 gap-2">
+                  {onReprint ? (
+                    <ActionButton
+                      variant="secondary"
+                      onPress={() => onReprint(job.id)}>
+                      Reprint
+                    </ActionButton>
+                  ) : null}
+                  {onUseSettings ? (
+                    <ActionButton
+                      variant="ghost"
+                      onPress={() => onUseSettings(job.id)}>
+                      Use same settings
+                    </ActionButton>
+                  ) : null}
+                  {job.status === 'failed' && onDiagnose ? (
+                    <ActionButton
+                      variant="ghost"
+                      onPress={() => onDiagnose(job.id)}>
+                      Diagnose this failure
+                    </ActionButton>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
           ))}
         </View>
@@ -61,6 +109,26 @@ export function PrintHistoryCard({jobs, limit = 4}: PrintHistoryCardProps) {
       )}
     </Card>
   );
+}
+
+function printerLabelFor(job: PrintJob, printers: Printer[]) {
+  if (job.printerName) {
+    return job.printerIp
+      ? `${job.printerName} · ${job.printerIp}`
+      : job.printerName;
+  }
+
+  const printer = printers.find(item => item.id === job.printerId);
+
+  if (printer) {
+    return `${printer.name} · ${printer.ip}`;
+  }
+
+  if (job.protocolUsed === 'SYSTEM') {
+    return 'Phone print dialog';
+  }
+
+  return 'Printer details unavailable';
 }
 
 function formatJobDate(value: string) {

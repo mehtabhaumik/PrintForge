@@ -11,6 +11,11 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		4F5046312D34600100D15C0D /* PrinterDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5046302D34600100D15C0D /* PrinterDiscovery.swift */; };
 		4F5046332D34600100D15C0D /* PrinterDiscoveryBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F5046322D34600100D15C0D /* PrinterDiscoveryBridge.m */; };
+		4F5046412D34800100D15C0D /* SystemPrint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5046402D34800100D15C0D /* SystemPrint.swift */; };
+		4F5046432D34800100D15C0D /* SystemPrintBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F5046422D34800100D15C0D /* SystemPrintBridge.m */; };
+		4F5046452D34800100D15C0D /* SharedFileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5046442D34800100D15C0D /* SharedFileStore.swift */; };
+		4F5046472D34800100D15C0D /* PrintForgeShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5046462D34800100D15C0D /* PrintForgeShare.swift */; };
+		4F5046492D34800100D15C0D /* PrintForgeShareBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F5046482D34800100D15C0D /* PrintForgeShareBridge.m */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		DBC8312ED891AA8C9ABD8B2F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
@@ -24,6 +29,11 @@
 		3B4392A12AC88292D35C810B /* Pods-PrintForgeNative.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PrintForgeNative.debug.xcconfig"; path = "Target Support Files/Pods-PrintForgeNative/Pods-PrintForgeNative.debug.xcconfig"; sourceTree = "<group>"; };
 		4F5046302D34600100D15C0D /* PrinterDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrinterDiscovery.swift; path = PrintForgeNative/PrinterDiscovery.swift; sourceTree = "<group>"; };
 		4F5046322D34600100D15C0D /* PrinterDiscoveryBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PrinterDiscoveryBridge.m; path = PrintForgeNative/PrinterDiscoveryBridge.m; sourceTree = "<group>"; };
+		4F5046402D34800100D15C0D /* SystemPrint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SystemPrint.swift; path = PrintForgeNative/SystemPrint.swift; sourceTree = "<group>"; };
+		4F5046422D34800100D15C0D /* SystemPrintBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = SystemPrintBridge.m; path = PrintForgeNative/SystemPrintBridge.m; sourceTree = "<group>"; };
+		4F5046442D34800100D15C0D /* SharedFileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedFileStore.swift; path = PrintForgeNative/SharedFileStore.swift; sourceTree = "<group>"; };
+		4F5046462D34800100D15C0D /* PrintForgeShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrintForgeShare.swift; path = PrintForgeNative/PrintForgeShare.swift; sourceTree = "<group>"; };
+		4F5046482D34800100D15C0D /* PrintForgeShareBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PrintForgeShareBridge.m; path = PrintForgeNative/PrintForgeShareBridge.m; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-PrintForgeNative.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PrintForgeNative.release.xcconfig"; path = "Target Support Files/Pods-PrintForgeNative/Pods-PrintForgeNative.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-PrintForgeNative.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PrintForgeNative.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = PrintForgeNative/AppDelegate.swift; sourceTree = "<group>"; };
@@ -50,6 +60,11 @@
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				4F5046302D34600100D15C0D /* PrinterDiscovery.swift */,
 				4F5046322D34600100D15C0D /* PrinterDiscoveryBridge.m */,
+				4F5046402D34800100D15C0D /* SystemPrint.swift */,
+				4F5046422D34800100D15C0D /* SystemPrintBridge.m */,
+				4F5046442D34800100D15C0D /* SharedFileStore.swift */,
+				4F5046462D34800100D15C0D /* PrintForgeShare.swift */,
+				4F5046482D34800100D15C0D /* PrintForgeShareBridge.m */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -255,6 +270,11 @@
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				4F5046312D34600100D15C0D /* PrinterDiscovery.swift in Sources */,
 				4F5046332D34600100D15C0D /* PrinterDiscoveryBridge.m in Sources */,
+				4F5046412D34800100D15C0D /* SystemPrint.swift in Sources */,
+				4F5046432D34800100D15C0D /* SystemPrintBridge.m in Sources */,
+				4F5046452D34800100D15C0D /* SharedFileStore.swift in Sources */,
+				4F5046472D34800100D15C0D /* PrintForgeShare.swift in Sources */,
+				4F5046492D34800100D15C0D /* PrintForgeShareBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,7 +301,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.printforge.app;
 				PRODUCT_NAME = PrintForgeNative;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -310,7 +330,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.printforge.app;
 				PRODUCT_NAME = PrintForgeNative;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_VERSION = 5.0;

@@ -4,6 +4,8 @@
 
 **Connect. Print. Scan. Simplified.**
 
+<img src="./assets/brand/brand-hero-dark.png" alt="PrintForge brand image" width="920" />
+
 PrintForge is a premium React Native mobile app for discovering printers and scanners on a local network, connecting with confidence, printing PDFs and images, and turning technical failures into calm, human guidance.
 
 [![React Native](https://img.shields.io/badge/React%20Native-CLI-4FA3FF?style=for-the-badge&logo=react&logoColor=white)](https://reactnative.dev/)
@@ -21,7 +23,7 @@ Printing should feel predictable.
 
 Most printer apps expose users to ports, unreachable devices, confusing network behavior, and vague failures. PrintForge is designed to feel different: intelligent, calm, premium, and direct. It checks the network using multiple discovery strategies, saves trusted devices, detects what a printer can actually do, and explains problems in plain language.
 
-PrintForge is free-first today, with foundations for future scan and fax support already shaped into the architecture.
+PrintForge is free-first today, with local-first intelligence and foundations for future scan and fax support already shaped into the architecture.
 
 **Product loop**
 
@@ -51,6 +53,8 @@ If no device is found:
 | **Printer Detail** | Displays status, capabilities, scanner readiness, diagnostics, and actions. | Users understand whether a printer is ready before printing. |
 | **Print Workflow** | Selects PDF/JPG/PNG files, shows a basic preview, print options, and status feedback. | Printing feels like a simple guided task. |
 | **Saved Devices** | Persists trusted printers with rename, remove, quick connect, and last-used behavior. | Returning users do not have to rediscover every time. |
+| **Compatibility Memory** | Learns locally which protocol and network behavior work best per printer. | PrintForge adapts without cloud analytics or personal data. |
+| **Scanner Readiness** | Shows detected, not detected, setup-needed, or unknown scanner states honestly. | Users see future scan readiness without being promised unfinished scan capture. |
 | **ForgeGuide** | Offline assistant with quick questions, app knowledge, contextual answers, duplicate-send protection, and related follow-ups. | Help is available without being intrusive. |
 
 ---
@@ -111,7 +115,7 @@ type Printer = {
   ip: string;
   port: number;
   protocolHint: 'IPP' | 'RAW' | 'UNKNOWN';
-  source: 'MDNS' | 'IP_SCAN' | 'MANUAL';
+  source: 'MDNS' | 'IP_SCAN';
 };
 ```
 
@@ -123,7 +127,8 @@ When a user selects a printer, PrintForge checks what is actually reachable.
 | --- | --- | --- |
 | IPP on `631` | Standard printing readiness | 3 seconds |
 | RAW on `9100` | Fallback direct socket printing | 3 seconds |
-| HTTP / HTTPS | Future scan endpoint foundation | 3 seconds |
+| HTTP / HTTPS | Printer web access and future setup hints | 3 seconds |
+| eSCL / AirScan paths | Scanner readiness foundation | 3 seconds |
 
 Capability result:
 
@@ -132,11 +137,16 @@ type PrinterCapabilities = {
   canPrint: boolean;
   supportedProtocols: Array<'IPP' | 'RAW'>;
   canScan: boolean;
+  scannerStatus: 'UNKNOWN' | 'DETECTED' | 'NOT_DETECTED' | 'NEEDS_SETUP';
+  scanProtocols: Array<'ESCL' | 'AIRSCAN' | 'HTTP'>;
+  scanEndpoint?: string;
   canFax: boolean;
   status: 'READY' | 'LIMITED' | 'UNREACHABLE';
   latencyMs: number;
 };
 ```
+
+Scan capture is intentionally disabled for now. A detected scanner means PrintForge found a network scan path such as eSCL or AirScan, not that document scanning is already implemented.
 
 ### 3. Print PDFs and Images
 
@@ -175,6 +185,7 @@ type SavedPrinter = {
   name: string;
   ip: string;
   lastUsedAt: string;
+  scannerStatus?: 'UNKNOWN' | 'DETECTED' | 'NOT_DETECTED' | 'NEEDS_SETUP';
 };
 ```
 
@@ -187,8 +198,24 @@ Users can:
 - Remove a saved printer.
 - See which saved printer was used most recently.
 - Recover when a saved printer IP changes by searching again or adding the new IP.
+- See scanner readiness for saved devices when scan-related signals have been checked.
 
-### 6. Ask ForgeGuide
+### 6. Learn Compatibility Locally
+
+PrintForge keeps privacy-safe compatibility memory on the phone only.
+
+It tracks:
+
+- Best known protocol.
+- Last successful protocol.
+- Latency band.
+- Repeated failure patterns.
+- Whether a printer often sleeps.
+- Whether RAW fallback works better.
+
+It does not store document names, cloud analytics, account data, or personal details.
+
+### 7. Ask ForgeGuide
 
 ForgeGuide is a quiet offline assistant inside the app.
 
@@ -258,6 +285,7 @@ PrintForge/
 | --- | --- | --- |
 | Printer Discovery | Android Kotlin | mDNS + throttled IP scan |
 | Capability Detection | Android Kotlin | IPP, RAW, HTTP/HTTPS checks |
+| Scanner Foundation | Android Kotlin + React Native UI | eSCL/AirScan readiness detection, scan capture disabled |
 | Print Engine | Android Kotlin | IPP and RAW print submission |
 | iOS Discovery | Swift bridge foundation | Ready for deeper discovery expansion |
 | Shared UI / State | React Native TypeScript | Android and iOS ready |
@@ -433,6 +461,8 @@ PrintForge can be offered free while still creating long-term product value:
 
 - Android has the deepest native implementation today.
 - iOS scaffolding and discovery bridge are present, with deeper parity planned.
+- Scanner readiness is a foundation only. The app can detect likely eSCL/AirScan paths, but full scan capture, preview, and export are not shipped yet.
+- Direct print behavior depends on printer firmware support for IPP or RAW. The phone system print dialog remains the broadest compatibility path.
 - Real printer behavior varies by model, firmware, network isolation, router settings, and sleep state.
 - `web-prototype/` is a preserved branding prototype and not part of the React Native bundle.
 

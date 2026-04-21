@@ -3,6 +3,7 @@ import {Text, View} from 'react-native';
 
 import {
   getCapabilitySummary,
+  getScannerCapabilityCopy,
   PrinterCapabilities,
   PrinterCapabilityStatus,
 } from '../services/printerCapabilityService';
@@ -70,22 +71,26 @@ export function CapabilityStatusCard({
       </View>
 
       <View className="mt-5 rounded-forge bg-forge-surface p-4">
-        <CapabilityRow
-          label="Print"
-          value={capabilities.canPrint ? 'Available' : 'Not reachable'}
-        />
-        <CapabilityRow
-          label="Scan"
-          value={
-            capabilities.canScan
-              ? 'Web access found. eSCL check comes next.'
-              : 'No scan endpoint confirmed yet.'
-          }
-        />
-        <CapabilityRow
-          label="Fax"
-          value={capabilities.canFax ? 'Available' : 'Not available yet'}
-        />
+        {(() => {
+          const scannerCopy = getScannerCapabilityCopy(capabilities);
+
+          return (
+            <>
+              <CapabilityRow
+                label="Print"
+                value={capabilities.canPrint ? 'Available' : 'Not reachable'}
+              />
+              <CapabilityRow
+                label="Scan"
+                value={`${scannerCopy.title}. ${scannerCopy.detail}`}
+              />
+              <CapabilityRow
+                label="Fax"
+                value={capabilities.canFax ? 'Available' : 'Not available yet'}
+              />
+            </>
+          );
+        })()}
       </View>
 
       <View className="mt-5">

@@ -14,6 +14,7 @@ export function OfflineAssistant({onPress}: OfflineAssistantProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Open ${assistantName}`}
+      testID="open-offline-assistant"
       hitSlop={12}
       pressRetentionOffset={16}
       className="mb-6 rounded-2xl border border-forge-border bg-forge-surface px-4 py-4"

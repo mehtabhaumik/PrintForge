@@ -20,6 +20,8 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -95,7 +97,7 @@ class PrintEngineModule(
         promise.resolve(error.toResult(startedAt).toWritableMap())
         return@execute
       }
-      val content = createTestPrintPayload()
+      val payload = createTestPrintPayload(jobRequest)
       var lastError: PrintEngineException? = null
 
       logPattern(
@@ -110,13 +112,13 @@ class PrintEngineModule(
               ip = jobRequest.ip,
               port = jobRequest.port,
               fileName = "PrintForge test page",
-              mimeType = "text/plain",
-              bytes = content,
+              mimeType = payload.mimeType,
+              bytes = payload.bytes,
             )
             PrintProtocol.RAW -> sendRawBytes(
               ip = jobRequest.ip,
               port = jobRequest.port,
-              bytes = content,
+              bytes = payload.bytes,
             )
           }
 
@@ -506,15 +508,156 @@ class PrintEngineModule(
     return "job-${digest.take(8).joinToString("") { "%02x".format(it) }}"
   }
 
-  private fun createTestPrintPayload(): ByteArray {
+  private fun createTestPrintPayload(request: TestPrintJobRequest): TestPrintPayload {
+    if (request.protocol == PrintProtocol.IPP) {
+      return TestPrintPayload(
+        bytes = createPdfTestPrintPayload(request),
+        mimeType = "application/pdf",
+      )
+    }
+
+    return TestPrintPayload(
+      bytes = createTextTestPrintPayload(request),
+      mimeType = "text/plain",
+    )
+  }
+
+  private fun createTextTestPrintPayload(request: TestPrintJobRequest): ByteArray {
+    val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).format(Date())
     return """
       PrintForge Test Page
+      Connect. Print. Scan. Simplified.
+
+      Printer
+      Name: ${request.printerName}
+      IP address: ${request.ip}
+      Port: ${request.port}
+      Protocol: ${request.protocol.name}
+      Time: $timestamp
+      Diagnostic code: ${request.diagnosticCode}
 
       Your phone reached this printer successfully.
       If this page printed clearly, basic printing is working.
 
-      Connect. Print. Scan. Simplified.
+      Color check
+      BLACK   [########################]
+      CYAN    [########################]
+      MAGENTA [########################]
+      YELLOW  [########################]
+      BLUE    [########################]
+      GREEN   [########################]
+      RED     [########################]
+
+      Alignment grid
+      +----+----+----+----+----+----+----+----+
+      | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 |
+      +----+----+----+----+----+----+----+----+
+      | 09 | 10 | 11 | 12 | 13 | 14 | 15 | 16 |
+      +----+----+----+----+----+----+----+----+
+      | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 |
+      +----+----+----+----+----+----+----+----+
+
+      If any row is missing, faded, or shifted, run diagnostics in PrintForge.
     """.trimIndent().toByteArray(Charsets.UTF_8)
+  }
+
+  private fun createPdfTestPrintPayload(request: TestPrintJobRequest): ByteArray {
+    val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).format(Date())
+    val content = buildString {
+      appendText(54, 742, 24, "PrintForge Test Page")
+      appendText(54, 716, 11, "Connect. Print. Scan. Simplified.")
+      appendText(54, 680, 12, "Printer: ${request.printerName}")
+      appendText(54, 662, 11, "IP: ${request.ip}:${request.port}    Protocol: ${request.protocol.name}")
+      appendText(54, 644, 11, "Time: $timestamp")
+      appendText(54, 626, 11, "Diagnostic code: ${request.diagnosticCode}")
+      appendText(54, 590, 14, "Color check")
+      appendColorBar(54, 560, 0.0, 0.0, 0.0, "BLACK")
+      appendColorBar(128, 560, 0.0, 0.68, 0.86, "CYAN")
+      appendColorBar(202, 560, 0.86, 0.0, 0.58, "MAGENTA")
+      appendColorBar(276, 560, 1.0, 0.82, 0.1, "YELLOW")
+      appendColorBar(350, 560, 0.1, 0.38, 0.92, "BLUE")
+      appendColorBar(424, 560, 0.2, 0.72, 0.36, "GREEN")
+      appendText(54, 518, 14, "Alignment grid")
+      appendGrid(54, 336, 504, 150, 8, 5)
+      appendText(54, 296, 11, "If bars are missing, faded, or shifted, run diagnostics in PrintForge.")
+    }
+
+    return createPdfDocument(content)
+  }
+
+  private fun StringBuilder.appendText(x: Int, y: Int, size: Int, text: String) {
+    append("BT /F1 $size Tf $x $y Td (${escapePdfText(text)}) Tj ET\n")
+  }
+
+  private fun StringBuilder.appendColorBar(
+    x: Int,
+    y: Int,
+    red: Double,
+    green: Double,
+    blue: Double,
+    label: String,
+  ) {
+    append("$red $green $blue rg $x $y 58 22 re f\n")
+    appendText(x, y - 16, 8, label)
+  }
+
+  private fun StringBuilder.appendGrid(
+    x: Int,
+    y: Int,
+    width: Int,
+    height: Int,
+    columns: Int,
+    rows: Int,
+  ) {
+    append("0.12 0.14 0.18 RG 0.75 w\n")
+    for (column in 0..columns) {
+      val lineX = x + ((width.toDouble() / columns) * column).toInt()
+      append("$lineX $y m $lineX ${y + height} l S\n")
+    }
+    for (row in 0..rows) {
+      val lineY = y + ((height.toDouble() / rows) * row).toInt()
+      append("$x $lineY m ${x + width} $lineY l S\n")
+    }
+  }
+
+  private fun createPdfDocument(content: String): ByteArray {
+    val contentBytes = content.toByteArray(Charsets.US_ASCII)
+    val objects = listOf(
+      "<< /Type /Catalog /Pages 2 0 R >>",
+      "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+      "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+      "<< /Length ${contentBytes.size} >>\nstream\n$content\nendstream",
+    )
+    val output = StringBuilder("%PDF-1.4\n")
+    val offsets = mutableListOf(0)
+
+    objects.forEachIndexed { index, body ->
+      offsets.add(output.toString().toByteArray(Charsets.US_ASCII).size)
+      output.append("${index + 1} 0 obj\n$body\nendobj\n")
+    }
+
+    val xrefOffset = output.toString().toByteArray(Charsets.US_ASCII).size
+    output.append("xref\n0 ${objects.size + 1}\n")
+    offsets.forEachIndexed { index, offset ->
+      if (index == 0) {
+        output.append("0000000000 65535 f \n")
+      } else {
+        output.append(String.format(Locale.US, "%010d 00000 n \n", offset))
+      }
+    }
+    output.append("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\n")
+    output.append("startxref\n$xrefOffset\n%%EOF\n")
+
+    return output.toString().toByteArray(Charsets.US_ASCII)
+  }
+
+  private fun escapePdfText(value: String): String {
+    return value
+      .replace("\\", "\\\\")
+      .replace("(", "\\(")
+      .replace(")", "\\)")
+      .filter { it.code in 32..126 }
   }
 
   private fun elapsedSince(startedAt: Long): Long {
@@ -572,6 +715,8 @@ class PrintEngineModule(
     val ip: String,
     val port: Int,
     val protocol: PrintProtocol,
+    val printerName: String,
+    val diagnosticCode: String,
   ) {
     companion object {
       fun fromReadableMap(request: ReadableMap): TestPrintJobRequest {
@@ -586,6 +731,10 @@ class PrintEngineModule(
             retryable = false,
           )
         }
+        val printerName = request.getString("printerName")?.takeIf { it.isNotBlank() }
+          ?: "PrintForge printer"
+        val diagnosticCode = request.getString("diagnosticCode")?.takeIf { it.isNotBlank() }
+          ?: "PF-LOCAL"
 
         if (ip.isBlank() || port !in 1..65535) {
           throw PrintEngineException(
@@ -595,7 +744,7 @@ class PrintEngineModule(
           )
         }
 
-        return TestPrintJobRequest(ip, port, protocol)
+        return TestPrintJobRequest(ip, port, protocol, printerName, diagnosticCode)
       }
     }
   }
@@ -608,6 +757,11 @@ class PrintEngineModule(
     val latencyMs: Long,
     val message: String,
     val errorCode: String?,
+  )
+
+  private data class TestPrintPayload(
+    val bytes: ByteArray,
+    val mimeType: String,
   )
 
   private class PrintEngineException(

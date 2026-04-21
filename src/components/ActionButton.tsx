@@ -8,6 +8,8 @@ type ActionButtonProps = {
   onPress?: () => void;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'ghost';
+  accessibilityLabel?: string;
+  testID?: string;
 };
 
 export function ActionButton({
@@ -15,6 +17,8 @@ export function ActionButton({
   onPress,
   disabled = false,
   variant = 'primary',
+  accessibilityLabel,
+  testID,
 }: ActionButtonProps) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -30,6 +34,8 @@ export function ActionButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
       disabled={disabled}
       hitSlop={12}
       pressRetentionOffset={14}
