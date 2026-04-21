@@ -10,7 +10,7 @@ import {PrintOptionsCard} from '../components/PrintOptionsCard';
 import {PrinterProfileCard} from '../components/PrinterProfileCard';
 import {ScanningState} from '../components/ScanningState';
 import {Screen} from '../components/Screen';
-import {SectionHeader} from '../components/SectionHeader';
+import {ScreenHeroCard} from '../components/ScreenHeroCard';
 import {usePrinterStore} from '../store/usePrinterStore';
 import {RootStackParamList} from '../utils/navigation';
 import {colors} from '../utils/theme';
@@ -65,10 +65,12 @@ export function PrintScreen({navigation, route}: PrintScreenProps) {
     <Screen>
       <AppHeader navigation={navigation} showBack />
 
-      <SectionHeader
+      <ScreenHeroCard
         eyebrow="Print"
-        title="Choose a file and print cleanly."
-        detail="Use the phone print dialog for broad compatibility, or direct print when you already chose a printer."
+        title="Choose a file and send it the clean way."
+        detail="Use the phone print dialog for broad compatibility, or send the job directly through PrintForge when you already chose a printer."
+        badgeLabel={printer ? printer.name : 'No printer selected'}
+        badgeTone={printer ? 'success' : 'default'}
       />
 
       {isBusy ? (

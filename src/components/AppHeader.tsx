@@ -138,7 +138,21 @@ export function AppHeader({
 
   return (
     <>
-      <View className="mb-7 mt-2 rounded-2xl border border-forge-border p-3" style={[glass.card, shadows.card]}>
+      <View
+        className="mb-7 mt-2 overflow-hidden rounded-2xl border border-forge-border p-3"
+        style={[glass.card, shadows.card]}>
+        <View
+          pointerEvents="none"
+          className="absolute -left-8 top-4 h-24 w-24 rounded-full bg-forge-violet/16"
+        />
+        <View
+          pointerEvents="none"
+          className="absolute -right-10 top-6 h-24 w-28 rounded-full bg-forge-blue/10"
+        />
+        <View
+          pointerEvents="none"
+          className="absolute left-4 right-4 top-0 h-px bg-forge-primary/20"
+        />
         <View className="flex-row items-center justify-between">
           <View className="min-w-0 flex-1 flex-row items-center">
             {showBack ? (

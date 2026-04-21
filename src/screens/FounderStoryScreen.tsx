@@ -6,6 +6,7 @@ import {ActionButton} from '../components/ActionButton';
 import {AppHeader} from '../components/AppHeader';
 import {Card} from '../components/Card';
 import {Screen} from '../components/Screen';
+import {ScreenHeroCard} from '../components/ScreenHeroCard';
 import {printForgeBrand} from '../utils/brand';
 import {RootStackParamList} from '../utils/navigation';
 
@@ -54,17 +55,13 @@ export function FounderStoryScreen({navigation}: FounderStoryScreenProps) {
     <Screen>
       <AppHeader navigation={navigation} showBack />
 
-      <View className="mb-7">
-        <Text className="text-xs font-semibold uppercase text-forge-muted">
-          Founder note
-        </Text>
-        <Text className="mt-3 text-3xl font-semibold leading-10 text-forge-primary">
-          Built for the moment when printing should just work.
-        </Text>
-        <Text className="mt-4 text-base leading-7 text-forge-secondary">
-          {printForgeBrand.tagline}
-        </Text>
-      </View>
+      <ScreenHeroCard
+        eyebrow="Founder note"
+        title="Built for the moment when printing should just work."
+        detail={printForgeBrand.tagline}
+        badgeLabel="Vision"
+        badgeTone="info"
+      />
 
       <Card className="mb-5">
         <Text className="text-xs font-semibold uppercase text-forge-muted">

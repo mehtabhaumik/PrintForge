@@ -13,6 +13,7 @@ import {PrinterCard} from '../components/PrinterCard';
 import {SavedPrinterCard} from '../components/SavedPrinterCard';
 import {SavedScannerSection} from '../components/SavedScannerSection';
 import {Screen} from '../components/Screen';
+import {ScreenHeroCard} from '../components/ScreenHeroCard';
 import {SectionHeader} from '../components/SectionHeader';
 import {usePrinterStore} from '../store/usePrinterStore';
 import {RootStackParamList} from '../utils/navigation';
@@ -106,6 +107,59 @@ export function HomeScreen({navigation}: HomeScreenProps) {
       <Screen>
         <AppHeader navigation={navigation} status={statusMessage} />
 
+        <ScreenHeroCard
+          eyebrow="Dashboard"
+          title="A calmer place to connect and manage devices."
+          detail={
+            isDiscoveryAvailable
+              ? 'Search nearby printers when you need them, keep trusted devices ready, and come back to the same setup flow without losing your place.'
+              : 'This build can still show the full setup flow, saved devices, diagnostics, and printing even when live discovery is unavailable here.'
+          }
+          badgeLabel={
+            savedPrinters.length > 0
+              ? 'Trusted devices ready'
+              : 'Ready for first setup'
+          }
+          badgeTone={savedPrinters.length > 0 ? 'success' : 'info'}>
+          <View className="flex-row flex-wrap gap-3">
+            <GlassStat
+              label="Saved devices"
+              value={`${savedPrinters.length}`}
+              detail={
+                savedPrinters.length === 1
+                  ? 'ready to reconnect'
+                  : 'kept for quick access'
+              }
+            />
+            <GlassStat
+              label="Nearby now"
+              value={`${availablePrinters.length}`}
+              detail={
+                availablePrinters.length === 1
+                  ? 'available device'
+                  : 'devices found'
+              }
+            />
+            <GlassStat
+              label="Recent jobs"
+              value={`${printAttemptLogs.length}`}
+              detail={
+                printAttemptLogs.length === 1
+                  ? 'print attempt'
+                  : 'print attempts'
+              }
+            />
+          </View>
+          <View className="mt-4">
+            <ActionButton
+              accessibilityLabel="Open guided setup"
+              testID="open-guided-setup"
+              onPress={() => navigation.navigate('PrinterSetup')}>
+              Open guided setup
+            </ActionButton>
+          </View>
+        </ScreenHeroCard>
+
         <Card className="mb-6">
           <Text className="text-xs font-semibold uppercase text-forge-muted">
             Device setup
@@ -131,14 +185,10 @@ export function HomeScreen({navigation}: HomeScreenProps) {
               </View>
             ))}
           </View>
-          <View className="mt-5">
-            <ActionButton
-              accessibilityLabel="Open guided setup"
-              testID="open-guided-setup"
-              onPress={() => navigation.navigate('PrinterSetup')}>
-              Open guided setup
-            </ActionButton>
-          </View>
+          <Text className="mt-5 text-sm leading-6 text-forge-muted">
+            Guided setup keeps Wi-Fi discovery, manual IP entry, and
+            troubleshooting in the same place.
+          </Text>
         </Card>
 
         <Card className="mb-6">
@@ -242,6 +292,30 @@ export function HomeScreen({navigation}: HomeScreenProps) {
 
         <PrintHistoryCard jobs={printAttemptLogs} limit={3} printers={printers} />
       </Screen>
+    </View>
+  );
+}
+
+function GlassStat({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <View className="min-w-[31%] flex-1 rounded-forge border border-forge-border bg-forge-surface/70 px-4 py-3">
+      <Text className="text-xs font-semibold uppercase text-forge-muted">
+        {label}
+      </Text>
+      <Text className="mt-2 text-2xl font-semibold text-forge-primary">
+        {value}
+      </Text>
+      <Text className="mt-1 text-xs leading-5 text-forge-secondary">
+        {detail}
+      </Text>
     </View>
   );
 }

@@ -11,6 +11,7 @@ import {DiscoverySearchModal} from '../components/DiscoverySearchModal';
 import {ManualPrinterCard} from '../components/ManualPrinterCard';
 import {PrinterCard} from '../components/PrinterCard';
 import {Screen} from '../components/Screen';
+import {ScreenHeroCard} from '../components/ScreenHeroCard';
 import {SectionHeader} from '../components/SectionHeader';
 import {isNativePrinterDiscoveryAvailable} from '../services/printerService';
 import {
@@ -108,10 +109,18 @@ export function PrinterSetupScreen({navigation, route}: PrinterSetupScreenProps)
     <Screen scrollRef={scrollViewRef}>
       <AppHeader navigation={navigation} showBack />
 
-      <SectionHeader
+      <ScreenHeroCard
         eyebrow="Setup"
-        title="Add a printer"
-        detail="Choose Wi-Fi discovery for nearby devices, or enter an IP address if you already know it."
+        title="Add a printer with the path that fits right now."
+        detail="Search the current Wi-Fi network for nearby devices, enter an IP address directly, or walk through troubleshooting before you try again."
+        badgeLabel={
+          mode === 'network'
+            ? 'Wi-Fi search'
+            : mode === 'ip'
+              ? 'Manual IP'
+              : 'Troubleshooting'
+        }
+        badgeTone={mode === 'help' ? 'warning' : 'info'}
       />
 
       <Card className="mb-5">

@@ -16,6 +16,7 @@ import {ActionButton} from '../components/ActionButton';
 import {AppHeader} from '../components/AppHeader';
 import {PrintForgeLogo} from '../components/PrintForgeLogo';
 import {Screen} from '../components/Screen';
+import {ScreenHeroCard} from '../components/ScreenHeroCard';
 import {
   assistantName,
   AssistantQuickAction,
@@ -176,19 +177,21 @@ export function AssistantScreen({navigation}: AssistantScreenProps) {
         className="flex-1">
         <AppHeader navigation={navigation} showBack onBack={returnHome} />
 
-        <View className="mb-5 rounded-2xl border border-forge-border bg-forge-card p-4" style={glass.card}>
+        <ScreenHeroCard
+          eyebrow="Assistant"
+          title={assistantName}
+          detail="Offline help for setup, Wi-Fi discovery, manual IP questions, saved devices, and calm troubleshooting."
+          badgeLabel="Offline"
+          badgeTone="success">
           <View className="flex-row items-center">
             <PrintForgeLogo variant="mark" size="sm" />
             <View className="ml-3 flex-1">
-              <Text className="text-2xl font-semibold text-forge-primary">
-                {assistantName}
-              </Text>
-              <Text className="mt-1 text-sm text-forge-secondary">
-                Offline help for PrintForge setup and troubleshooting.
+              <Text className="text-sm leading-6 text-forge-secondary">
+                Ask directly, or start from one of the quick questions below.
               </Text>
             </View>
           </View>
-        </View>
+        </ScreenHeroCard>
 
         <View className="mb-4 rounded-2xl border border-forge-border bg-forge-surface p-4" style={glass.surface}>
           <Text className="text-xs font-semibold uppercase text-forge-muted">

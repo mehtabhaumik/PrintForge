@@ -10,6 +10,7 @@ import {CompatibilityMemoryCard} from '../components/CompatibilityMemoryCard';
 import {DiagnosticsCard} from '../components/DiagnosticsCard';
 import {ScannerFoundationCard} from '../components/ScannerFoundationCard';
 import {Screen} from '../components/Screen';
+import {ScreenHeroCard} from '../components/ScreenHeroCard';
 import {SectionHeader} from '../components/SectionHeader';
 import type {PrinterCapabilities} from '../services/printerCapabilityService';
 import {getProfileSummary} from '../services/printerProfileService';
@@ -86,10 +87,18 @@ export function PrinterDetailScreen({
     <Screen>
       <AppHeader navigation={navigation} showBack />
 
-      <SectionHeader
+      <ScreenHeroCard
         eyebrow="Printer"
         title={printer.name}
-        detail={`${printer.ip}:${printer.port} · ${printer.source === 'MDNS' ? 'Bonjour' : 'Port scan'}`}
+        detail={`${printer.ip}:${printer.port} · ${printer.source === 'MDNS' ? 'Bonjour discovery' : 'IP range scan'} · ${printer.protocolHint}`}
+        badgeLabel={statusPresentation.label}
+        badgeTone={
+          statusPresentation.label === 'Ready'
+            ? 'success'
+            : statusPresentation.label === 'Limited'
+              ? 'warning'
+              : 'info'
+        }
       />
 
       <Card className="mb-5">
